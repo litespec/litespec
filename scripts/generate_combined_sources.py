@@ -31,8 +31,8 @@ from litespec.extraction.c_translation_unit import _function_name, functions
 
 REPO = Path(__file__).resolve().parents[1]
 KERNEL = REPO / "third_party" / "liteos"
-BOARD = REPO / ".tools" / "board" / "include"
-STUBS = REPO / ".tools" / "stubs" / "include"
+BOARD = REPO / "targets" / "rliteos" / "board" / "include"
+STUBS = REPO / "targets" / "rliteos" / "stubs" / "include"
 
 INCLUDE_DIRS = [
     KERNEL / "kernel" / "include",

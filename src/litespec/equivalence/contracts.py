@@ -57,7 +57,7 @@ def _port_and_run(c_source: bytes, closure: set[str], tm, main: str) -> str:
             fns.append(f.name)
     rust = port_module(c_source, fns, type_model=tm, config=Config(), executable=True)
     rust += main
-    with tempfile.TemporaryDirectory(dir=Path("/root/deepseek")) as d:
+    with tempfile.TemporaryDirectory() as d:
         srcf = Path(d) / "contract.rs"
         exe = Path(d) / "contract"
         srcf.write_text(rust, encoding="utf-8")
