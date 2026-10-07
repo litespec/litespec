@@ -1,0 +1,103 @@
+isir_version: '0.1'
+module:
+  name: LOS_MemAllocAlign
+  clocks:
+  - name: clk
+    edge: posedge
+  resets:
+  - name: rst
+    polarity: active_high
+    async: false
+    affects: all
+  state:
+  - name: gapSize
+    kind: register
+    type: bits<32>
+    initial: 0
+  - name: useSize
+    kind: register
+    type: bits<32>
+    initial: 0
+  - name: poolHead
+    kind: register
+    type: bits<32>
+    initial: 0
+  - name: intSave
+    kind: register
+    type: bits<32>
+    initial: 0
+  - name: ptr
+    kind: register
+    type: bits<32>
+    initial: 0
+  - name: alignedPtr
+    kind: register
+    type: bits<32>
+    initial: 0
+  - name: allocNode
+    kind: register
+    type: bits<32>
+    initial: 0
+  rules:
+  - name: LOS_MemAllocAlign
+    action:
+    - (write size 2)
+    - (write useSize (sub (add (read size) (read boundary)) 1))
+    - (write poolHead (read pool))
+    - (write ptr 0)
+    - (write alignedPtr 0)
+    - (LOS_SpinLockSave AddrOf(target=Field(base=Var(name='poolHead'), name='spinlock'))
+      AddrOf(target=Var(name='intSave')))
+    - (write ptr (OsMemAlloc (read pool) (read useSize) (read intSave)))
+    - (LOS_SpinUnlockRestore AddrOf(target=Field(base=Var(name='poolHead'), name='spinlock'))
+      (read intSave))
+    - (write alignedPtr (& (sub (add (UINTPTR (read ptr)) (read boundary)) 1) (^ -1
+      (UINTPTR (sub (read boundary) 1)))))
+    - (read __break__)
+    - (write gapSize (UINT32 (sub (UINTPTR (read alignedPtr)) (UINTPTR (read ptr)))))
+    - (write allocNode (sub (read ptr) 1))
+    - (write (field (field (read allocNode) header) sizeAndFlag) (| (field (field
+      (read allocNode) header) sizeAndFlag) 1073741824))
+    - (write gapSize (| (read gapSize) 1073741824))
+    - (write (select (sub (UINTPTR (read alignedPtr)) 1) 0) (read gapSize))
+    - (write ptr (read alignedPtr))
+    - (OsHookCall (read LOS_HOOK_TYPE_MEM_ALLOCALIGN) (read pool) (read ptr) (read
+      size) (read boundary))
+  inputs:
+  - name: pool
+    direction: input
+    type: bits<32>
+  - name: size
+    direction: input
+    type: bits<32>
+  - name: boundary
+    direction: input
+    type: bits<32>
+  abstraction:
+    relation:
+      name: alpha
+      source: LIR
+      target: ISIR
+      map_expr: lambda sigma. { sig_gapSize := sigma.gapSize, sig_useSize := sigma.useSize,
+        sig_poolHead := sigma.poolHead, sig_intSave := sigma.intSave, sig_ptr := sigma.ptr,
+        sig_alignedPtr := sigma.alignedPtr, sig_allocNode := sigma.allocNode }
+      totality: true
+      notes: null
+    signals:
+    - sig_gapSize
+    - sig_useSize
+    - sig_poolHead
+    - sig_intSave
+    - sig_ptr
+    - sig_alignedPtr
+    - sig_allocNode
+  properties:
+  - name: post_0
+    kind: safety
+    expression:
+      kind: always
+      operand: 'true'
+  proof_obligations:
+  - property: post_0
+    status: unproved
+    engine: model_checking

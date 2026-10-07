@@ -1,0 +1,86 @@
+isir_version: '0.1'
+module:
+  name: LOS_MemFree
+  clocks:
+  - name: clk
+    edge: posedge
+  resets:
+  - name: rst
+    polarity: active_high
+    async: false
+    affects: all
+  state:
+  - name: intSave
+    kind: register
+    type: bits<32>
+    initial: 0
+  - name: ret
+    kind: register
+    type: bits<32>
+    initial: 0
+  - name: poolHead
+    kind: register
+    type: bits<32>
+    initial: 0
+  - name: node
+    kind: register
+    type: bits<32>
+    initial: 0
+  - name: gapSize
+    kind: register
+    type: bits<32>
+    initial: 0
+  rules:
+  - name: LOS_MemFree
+    action:
+    - (write ret 1)
+    - (OsHookCall (read LOS_HOOK_TYPE_MEM_FREE) (read pool) (read ptr))
+    - (write poolHead (read pool))
+    - (write node 0)
+    - (write gapSize Deref(ptr=BinOp(op='-', left=Call(name='UINTPTR', args=(Var(name='ptr'),)),
+      right=IntLit(value=1))))
+    - (PRINT_ERR 0 (read __FUNCTION__) (read __LINE__) (read gapSize))
+    - (read __break__)
+    - (write node (sub (UINTPTR (read ptr)) 3))
+    - (write gapSize (& (read gapSize) -1073741825))
+    - (PRINT_ERR 0 (read gapSize))
+    - (read __break__)
+    - (write node (sub (sub (UINTPTR (read ptr)) (read gapSize)) 3))
+    - (LOS_SpinLockSave AddrOf(target=Field(base=Var(name='poolHead'), name='spinlock'))
+      AddrOf(target=Var(name='intSave')))
+    - (write ret (OsMemFree (read poolHead) (read node)))
+    - (LOS_SpinUnlockRestore AddrOf(target=Field(base=Var(name='poolHead'), name='spinlock'))
+      (read intSave))
+  inputs:
+  - name: pool
+    direction: input
+    type: bits<32>
+  - name: ptr
+    direction: input
+    type: bits<32>
+  abstraction:
+    relation:
+      name: alpha
+      source: LIR
+      target: ISIR
+      map_expr: lambda sigma. { sig_intSave := sigma.intSave, sig_ret := sigma.ret,
+        sig_poolHead := sigma.poolHead, sig_node := sigma.node, sig_gapSize := sigma.gapSize
+        }
+      totality: true
+      notes: null
+    signals:
+    - sig_intSave
+    - sig_ret
+    - sig_poolHead
+    - sig_node
+    - sig_gapSize
+  properties:
+  - name: post_0
+    kind: safety
+    expression:
+      kind: always
+      operand: 'true'
+  proof_obligations:
+  - property: post_0
+    status: unproved
+    engine: model_checking

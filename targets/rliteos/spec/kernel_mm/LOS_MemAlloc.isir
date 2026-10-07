@@ -1,0 +1,67 @@
+isir_version: '0.1'
+module:
+  name: LOS_MemAlloc
+  clocks:
+  - name: clk
+    edge: posedge
+  resets:
+  - name: rst
+    polarity: active_high
+    async: false
+    affects: all
+  state:
+  - name: poolHead
+    kind: register
+    type: bits<32>
+    initial: 0
+  - name: ptr
+    kind: register
+    type: bits<32>
+    initial: 0
+  - name: intSave
+    kind: register
+    type: bits<32>
+    initial: 0
+  rules:
+  - name: LOS_MemAlloc
+    action:
+    - (write size 2)
+    - (write poolHead (read pool))
+    - (write ptr 0)
+    - (read __break__)
+    - (LOS_SpinLockSave AddrOf(target=Field(base=Var(name='poolHead'), name='spinlock'))
+      AddrOf(target=Var(name='intSave')))
+    - (write ptr (OsMemAlloc (read poolHead) (read size) (read intSave)))
+    - (LOS_SpinUnlockRestore AddrOf(target=Field(base=Var(name='poolHead'), name='spinlock'))
+      (read intSave))
+    - (OsHookCall (read LOS_HOOK_TYPE_MEM_ALLOC) (read pool) (read ptr) (read size))
+  inputs:
+  - name: pool
+    direction: input
+    type: bits<32>
+  - name: size
+    direction: input
+    type: bits<32>
+  abstraction:
+    relation:
+      name: alpha
+      source: LIR
+      target: ISIR
+      map_expr: lambda sigma. { sig_poolHead := sigma.poolHead, sig_ptr := sigma.ptr,
+        sig_intSave := sigma.intSave }
+      totality: true
+      notes: null
+    signals:
+    - sig_poolHead
+    - sig_ptr
+    - sig_intSave
+  properties:
+  - name: post_0
+    kind: safety
+    expression:
+      kind: always
+      operand: 'true'
+  proof_obligations:
+  - property: post_0
+    status: unproved
+    engine: model_checking
