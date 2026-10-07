@@ -21,7 +21,10 @@ def isir_completeness_command(argv: list[str]) -> int:
     modules = target.modules
     if args.module:
         if args.module not in modules:
-            print(f"isir-completeness: unknown module {args.module!r} (have {sorted(modules)})", file=__import__("sys").stderr)
+            print(
+                f"isir-completeness: unknown module {args.module!r} (have {sorted(modules)})",
+                file=__import__("sys").stderr,
+            )
             return 2
         modules = {args.module: modules[args.module]}
 
@@ -47,7 +50,10 @@ def ec_completeness_command(argv: list[str]) -> int:
     modules = target.modules
     if args.module:
         if args.module not in modules:
-            print(f"ec-completeness: unknown module {args.module!r} (have {sorted(modules)})", file=__import__("sys").stderr)
+            print(
+                f"ec-completeness: unknown module {args.module!r} (have {sorted(modules)})",
+                file=__import__("sys").stderr,
+            )
             return 2
         modules = {args.module: modules[args.module]}
 

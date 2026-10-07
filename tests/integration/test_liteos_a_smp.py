@@ -29,7 +29,9 @@ SRC = (
 
 
 def _run(main: str) -> str:
-    rust = port_module(SRC.encode(), ["smp_atomic_test"], type_model=load_type_model("liteos"), config=Config(), executable=True)
+    rust = port_module(
+        SRC.encode(), ["smp_atomic_test"], type_model=load_type_model("liteos"), config=Config(), executable=True
+    )
     rust += main
     with tempfile.TemporaryDirectory(dir=Path(__file__).resolve().parents[2]) as d:
         srcf = Path(d) / "smp.rs"
@@ -48,7 +50,7 @@ def test_atomic_fetch_and_cmpxchg_semantics():
     out = _run(
         "\nfn main() { unsafe {\n"
         "  __write(0x100, 10);\n"
-        '  let r = smp_atomic_test(0x100, 5, 9, 99);\n'
+        "  let r = smp_atomic_test(0x100, 5, 9, 99);\n"
         '  println!("r={} v={}", r, __read(0x100));\n'
         "} }\n"
     )
@@ -61,7 +63,7 @@ def test_atomic_cmpxchg_swaps_on_match():
     out = _run(
         "\nfn main() { unsafe {\n"
         "  __write(0x100, 99);\n"
-        '  let r = smp_atomic_test(0x100, 0, 9, 99);\n'
+        "  let r = smp_atomic_test(0x100, 0, 9, 99);\n"
         '  println!("r={} v={}", r, __read(0x100));\n'
         "} }\n"
     )
@@ -74,7 +76,7 @@ def test_curr_cpuid_cell():
         "\nfn main() { unsafe {\n"
         "  __write_curr_cpuid(2);\n"
         "  __write(0x100, 10);\n"
-        '  let r = smp_atomic_test(0x100, 5, 9, 99);\n'
+        "  let r = smp_atomic_test(0x100, 5, 9, 99);\n"
         '  println!("r={}", r);\n'
         "} }\n"
     )

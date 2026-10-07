@@ -6,8 +6,10 @@
 LiteSpec is a unified software-level specification and lowering framework:
 
 ```
-C source ──► LIR ──► Rust ──► ISIR ──► [InterScope](https://github.com/ywci/interscope) (ITP / model checking)
+C source ──► LIR ──► Rust ──► ISIR ──► InterScope (ITP / model checking)
 ```
+
+ISIR proof obligations are discharged by [InterScope](https://github.com/ywci/interscope).
 
 It lowers real LiteOS-A / OpenHarmony kernel code (task, scheduler, timer, mutex,
 memory, IPC, and the ARM arch-MMU) to a word-addressable Rust port (`rliteos`),

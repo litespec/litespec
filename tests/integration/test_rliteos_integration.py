@@ -95,7 +95,20 @@ def _build_image(d: Path) -> Path:
 def _boot(elf: Path, timeout_s: int = 8) -> str:
     """Boot the ELF in QEMU and return its serial output."""
     proc = subprocess.Popen(
-        ["qemu-system-arm", "-machine", "virt", "-cpu", "cortex-a15", "-m", "128M", "-nographic", "-nic", "none", "-kernel", str(elf)],
+        [
+            "qemu-system-arm",
+            "-machine",
+            "virt",
+            "-cpu",
+            "cortex-a15",
+            "-m",
+            "128M",
+            "-nographic",
+            "-nic",
+            "none",
+            "-kernel",
+            str(elf),
+        ],
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
         text=True,

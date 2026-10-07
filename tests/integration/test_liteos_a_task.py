@@ -144,7 +144,11 @@ def test_task_create_only_full_path():
     # TaskStackInit → *taskID = taskCB->taskID (output param round-trip).
     src = SRC3.read_bytes()
     rust = port_module(
-        src, _fns(src), type_model=load_type_model("liteos"), config=Config(), executable=True,
+        src,
+        _fns(src),
+        type_model=load_type_model("liteos"),
+        config=Config(),
+        executable=True,
         mock_returns={"OsTaskStackInit": 0x5000},
     )
     rust += (
@@ -210,7 +214,11 @@ def test_task_create_public_wrapper():
     # LOS_TaskCreate: processID assignment + OS_TCB_FROM_TID (struct-pointer arithmetic on a global).
     src = SRC5.read_bytes()
     rust = port_module(
-        src, _fns(src), type_model=load_type_model("liteos"), config=Config(), executable=True,
+        src,
+        _fns(src),
+        type_model=load_type_model("liteos"),
+        config=Config(),
+        executable=True,
         mock_returns={"OsTaskStackInit": 0x5000},
     )
     assert "wrapping_mul(85)" in rust  # OS_TCB_FROM_TID scales by sizeof(LosTaskCB) = 85 words

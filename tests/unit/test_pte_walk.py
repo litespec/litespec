@@ -11,11 +11,10 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from litespec.extraction import parse_c
+from litespec.equivalence.lir_interp import run_effect
+from litespec.extraction import extract_function, parse_c
 from litespec.extraction.macro_resolution import _expr_from_text, _resolve_expr
 from litespec.extraction.macro_table import MacroTable
-from litespec.equivalence.lir_interp import run_effect
-from litespec.extraction import extract_function
 
 REPO = Path(__file__).resolve().parents[2]
 LITEOS = REPO / "third_party" / "liteos"

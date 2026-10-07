@@ -37,10 +37,7 @@ def test_struct_table_field_offsets():
 
 
 def test_struct_table_scoped_field_offsets_and_types():
-    tu = parse_c(
-        b"struct A { unsigned int x; struct B b; };"
-        b"struct B { unsigned int x; unsigned int y; };"
-    )
+    tu = parse_c(b"struct A { unsigned int x; struct B b; };struct B { unsigned int x; unsigned int y; };")
     st = StructTable.from_translation_unit(tu)
     # Scoped offsets keep colliding ``x`` separate.
     assert st.scoped_field_offsets() == {

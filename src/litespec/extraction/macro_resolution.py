@@ -34,7 +34,6 @@ from litespec.lir.effect_expr_ast import (
     Return,
     Sequence,
     SetUpdate,
-    Skip,
     Ternary,
     Var,
     While,
@@ -207,7 +206,7 @@ def _expand_assignment_macro(call: Call, macros: MacroTable, depth: int) -> Effe
     params, body = macros.functions[call.name]
     text = body
     for p, a in zip(params, call.args):
-        text = re.sub(r"\b" + re.escape(p) + r"\b", lambda _m: _expr_to_c_text(a), text)
+        text = re.sub(r"\b" + re.escape(p) + r"\b", lambda _m, a=a: _expr_to_c_text(a), text)
     node = _find_assignment(parse_c(text.encode()))
     if node is None:
         return ExprStmt(call)
@@ -239,7 +238,7 @@ def _resolve_effect(effect: EffectExpr, macros: MacroTable, depth: int) -> Effec
         # A statement-macro (e.g. ``OS_MEM_NODE_SET_USED_FLAG(x)``) expands to an
         # assignment ``(x) = (x | FLAG)``; expand it as an Assign, not a value.
         if isinstance(effect.expr, Call) and effect.expr.name in macros.functions:
-            params, body = macros.functions[effect.expr.name]
+            _, body = macros.functions[effect.expr.name]
             if _find_assignment(parse_c(body.encode())) is not None:
                 return _expand_assignment_macro(effect.expr, macros, depth)
         return ExprStmt(_resolve_expr(effect.expr, macros, depth + 1))

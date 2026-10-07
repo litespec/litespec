@@ -5,8 +5,9 @@ that each contract's observable check passes on that arch's combined source. The
 ``compare_contracts`` helper is what will later diff two archs (x86 vs arm, etc.).
 """
 
-import pytest
 from pathlib import Path
+
+import pytest
 
 from litespec.equivalence.contracts import compare_contracts, verify_contracts
 from litespec.targets.loader import load_target

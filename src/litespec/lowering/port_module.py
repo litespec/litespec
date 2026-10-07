@@ -204,7 +204,9 @@ def _port_module(
     for name in set(tm.c_to_lir) | set(INTRINSICS):
         functions.pop(name, None)
 
-    scaffold = render_stub_scaffold(unknown_types, functions, constants, executable=executable, mock_returns=mock_returns)
+    scaffold = render_stub_scaffold(
+        unknown_types, functions, constants, executable=executable, mock_returns=mock_returns
+    )
     set_variadic({n for n, (_, _, v) in functions.items() if v})
     set_globals(globals_)
     set_field_offsets(field_offsets)

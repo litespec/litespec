@@ -293,7 +293,7 @@ def _expand_for_macro_at_map(call, macros, body: EffectExpr) -> EffectExpr:
     params, body_text = macros.functions[call.name]
     text = body_text
     for p, a in zip(params, call.args):
-        text = re.sub(r"\b" + re.escape(p) + r"\b", lambda _m: _expr_to_c_text(a), text)
+        text = re.sub(r"\b" + re.escape(p) + r"\b", lambda _m, a=a: _expr_to_c_text(a), text)
     node = _find_for(parse_c(text.encode()))
     if node is None:
         return ExprStmt(call)

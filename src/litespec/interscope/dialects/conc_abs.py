@@ -79,8 +79,7 @@ def derive_conc_abs_dialect(effect) -> ConcAbsDialect:
         guarantee=guarantee,
         atomic_actions=atomic_actions,
         notes=(
-            f"derived from {len(atomic_actions)} atomic action(s)"
-            + (" + spin-lock section" if has_spinlock else "")
+            f"derived from {len(atomic_actions)} atomic action(s)" + (" + spin-lock section" if has_spinlock else "")
         ),
     )
 
@@ -123,9 +122,7 @@ def check_conc_abs_compatibility(dialects: list[ConcAbsDialect]) -> CheckResult:
             if i == j:
                 continue
             if not _compatible(a.guarantee, b.rely):
-                errors.append(
-                    f"thread {i} guarantee {a.guarantee!r} not subsumed by thread {j} rely {b.rely!r}"
-                )
+                errors.append(f"thread {i} guarantee {a.guarantee!r} not subsumed by thread {j} rely {b.rely!r}")
     if errors:
         return CheckResult(status="fail", errors=errors)
     return CheckResult(status="pass", reports=[f"{len(dialects)} components R/G-compatible"])

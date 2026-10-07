@@ -23,12 +23,23 @@ if not SRC.exists():
 # The walk plus its PTE-op / flag-converter callees (ported as real functions).
 _WALK_CLOSURE = {
     "LOS_ArchMmuQuery",
-    "OsGetPte1", "OsGetPte1Ptr", "OsGetPte1Index",
-    "OsIsPte1Invalid", "OsIsPte1Section", "OsIsPte1PageTable",
-    "OsGetPte2", "OsGetPte2Index", "OsGetPte2BasePtr",
-    "OsIsPte2SmallPage", "OsIsPte2SmallPageXN", "OsIsPte2LargePage",
-    "OsCvtSecAttsToFlags", "OsCvtPte2AttsToFlags",
-    "OsCvtSecFlagsToAttrs", "OsCvtSecCacheFlagsToMMUFlags", "OsCvtSecAccessFlagsToMMUFlags",
+    "OsGetPte1",
+    "OsGetPte1Ptr",
+    "OsGetPte1Index",
+    "OsIsPte1Invalid",
+    "OsIsPte1Section",
+    "OsIsPte1PageTable",
+    "OsGetPte2",
+    "OsGetPte2Index",
+    "OsGetPte2BasePtr",
+    "OsIsPte2SmallPage",
+    "OsIsPte2SmallPageXN",
+    "OsIsPte2LargePage",
+    "OsCvtSecAttsToFlags",
+    "OsCvtPte2AttsToFlags",
+    "OsCvtSecFlagsToAttrs",
+    "OsCvtSecCacheFlagsToMMUFlags",
+    "OsCvtSecAccessFlagsToMMUFlags",
 }
 
 

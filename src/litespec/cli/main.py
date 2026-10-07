@@ -6,7 +6,6 @@
 from __future__ import annotations
 
 import sys
-from pathlib import Path
 
 from litespec.cli.build_gn_command import build_gn_command
 from litespec.cli.completeness_commands import ec_completeness_command, isir_completeness_command

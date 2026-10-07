@@ -31,13 +31,14 @@ class ContractResult:
 
 
 #: spec name → check(c_source, fn_name, tm) -> ContractResult
-_CONTRACTS: dict[str, "callable"] = {}
+_CONTRACTS: dict[str, callable] = {}
 
 
 def register(spec: str):
     def deco(fn):
         _CONTRACTS[spec] = fn
         return fn
+
     return deco
 
 
@@ -103,22 +104,34 @@ def mmu_query(c_source: bytes, fn_name: str, tm, memory: dict | None = None) -> 
     entry = section_base | section_type
     expected_paddr = (entry & section_frame) + (vaddr & section_offset_mask)
     closure = {
-        fn_name, "OsGetPte1", "OsGetPte1Ptr", "OsGetPte1Index",
-        "OsIsPte1Invalid", "OsIsPte1Section", "OsIsPte1PageTable",
-        "OsGetPte2", "OsGetPte2Index", "OsGetPte2BasePtr",
-        "OsIsPte2SmallPage", "OsIsPte2SmallPageXN", "OsIsPte2LargePage",
-        "OsCvtSecAttsToFlags", "OsCvtPte2AttsToFlags",
-        "OsCvtSecFlagsToAttrs", "OsCvtSecCacheFlagsToMMUFlags", "OsCvtSecAccessFlagsToMMUFlags",
+        fn_name,
+        "OsGetPte1",
+        "OsGetPte1Ptr",
+        "OsGetPte1Index",
+        "OsIsPte1Invalid",
+        "OsIsPte1Section",
+        "OsIsPte1PageTable",
+        "OsGetPte2",
+        "OsGetPte2Index",
+        "OsGetPte2BasePtr",
+        "OsIsPte2SmallPage",
+        "OsIsPte2SmallPageXN",
+        "OsIsPte2LargePage",
+        "OsCvtSecAttsToFlags",
+        "OsCvtPte2AttsToFlags",
+        "OsCvtSecFlagsToAttrs",
+        "OsCvtSecCacheFlagsToMMUFlags",
+        "OsCvtSecAccessFlagsToMMUFlags",
     }
     it = tm.word_type()
     main = (
         "\nfn main() { unsafe {\n"
         f"  let am: {it} = 0x1000; __write(am+{virt_off}, 0x2000);\n"  # archMmu.virtTtb → L1 table
         f"  __write(0x2000+{ttb_index}, 0);\n"  # unmapped: L1 entry invalid → NOT_FOUND
-        f'  let s1 = {fn_name}(am, {vaddr}, 0x3000, 0);\n'
+        f"  let s1 = {fn_name}(am, {vaddr}, 0x3000, 0);\n"
         '  println!("s1={} p1={:#x}", s1, __read(0x3000));\n'
         f"  __write(0x2000+{ttb_index}, {entry:#x});\n"  # mapped: L1 section entry
-        f'  let s2 = {fn_name}(am, {vaddr}, 0x3000, 0);\n'
+        f"  let s2 = {fn_name}(am, {vaddr}, 0x3000, 0);\n"
         '  println!("s2={} p2={:#x}", s2, __read(0x3000));\n'
         "} }\n"
     )
@@ -131,7 +144,9 @@ def mmu_query(c_source: bytes, fn_name: str, tm, memory: dict | None = None) -> 
     p2 = int(tokens[3].split("=")[1], 16)
     reports = []
     reports.append(f"unmapped vaddr → status={s1} (expected non-zero) {'✓' if s1 != 0 else '✗'}")
-    reports.append(f"section vaddr → paddr={p2:#x} (expected {expected_paddr:#x}) {'✓' if p2 == expected_paddr else '✗'}")
+    reports.append(
+        f"section vaddr → paddr={p2:#x} (expected {expected_paddr:#x}) {'✓' if p2 == expected_paddr else '✗'}"
+    )
     ok = (s1 != 0) and (p2 == expected_paddr)
     return ContractResult("mmu_query", fn_name, "pass" if ok else "fail", reports)
 
@@ -145,7 +160,9 @@ def run_contract(decl: dict, c_source: bytes, tm, memory: dict | None = None) ->
     return check(c_source, fn, tm, memory)
 
 
-def verify_contracts(c_source: bytes, contracts: list[dict], tm=None, memory: dict | None = None) -> list[ContractResult]:
+def verify_contracts(
+    c_source: bytes, contracts: list[dict], tm=None, memory: dict | None = None
+) -> list[ContractResult]:
     """Run every declared contract of one target against its combined source."""
     if tm is None:
         from litespec.type_mapping import load_type_model
@@ -154,7 +171,9 @@ def verify_contracts(c_source: bytes, contracts: list[dict], tm=None, memory: di
     return [run_contract(c, c_source, tm, memory) for c in contracts]
 
 
-def compare_contracts(a_source: bytes, b_source: bytes, contracts: list[dict], tm_a=None, tm_b=None, memory_a=None, memory_b=None) -> dict:
+def compare_contracts(
+    a_source: bytes, b_source: bytes, contracts: list[dict], tm_a=None, tm_b=None, memory_a=None, memory_b=None
+) -> dict:
     """Run the same contracts on two arch sources and diff the results."""
     from litespec.type_mapping import load_type_model
 

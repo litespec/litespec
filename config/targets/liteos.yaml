@@ -12,7 +12,7 @@
 target:
   name: liteos
   port_name: rliteos   # name of the ported Rust crate/module
-  source_repo: https://gitee.com/openharmony/kernel_liteos_a
+  source_repo: https://github.com/openharmony/kernel_liteos_a
   source_commit: 1b5d3de13bea4a93e6713f180710f2f307cad403
   # Full OpenHarmony manifest (for `./run.sh repo-init` → `repo sync`).
   manifest_repo: https://gitee.com/openharmony/manifest.git

@@ -38,10 +38,16 @@ def _emit(source: bytes, name: str, backend: str = "acl2") -> str:
 
 
 def verify_isir_command(argv: list[str]) -> int:
-    parser = argparse.ArgumentParser(prog="litespec verify-isir", description="Emit ISIR → InterScope backend verification")
+    parser = argparse.ArgumentParser(
+        prog="litespec verify-isir", description="Emit ISIR → InterScope backend verification"
+    )
     parser.add_argument("file", help="path to a .c source file or a .isir file")
     parser.add_argument("--function", "-f", dest="function", help="function to verify (for .c input)")
-    parser.add_argument("--backend", default=None, help="InterScope backend name (e.g. symbiyosys), or 'structural' for the in-repo backend")
+    parser.add_argument(
+        "--backend",
+        default=None,
+        help="InterScope backend name (e.g. symbiyosys), or 'structural' for the in-repo backend",
+    )
     args = parser.parse_args(argv)
 
     # The in-repo structural backend needs no InterScope toolchain.
