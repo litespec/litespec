@@ -226,6 +226,11 @@ def fetch_source(target: TargetRequirements, dest: Optional[Path] = None) -> Pat
         raise ValueError(f"target {target.name!r} has no source_repo/source_commit")
     dest = dest or third_party_dir(target)
     dest.parent.mkdir(parents=True, exist_ok=True)
-    subprocess.run(["git", "clone", "--no-checkout", target.source_repo, str(dest)], check=True)
-    subprocess.run(["git", "-C", str(dest), "checkout", target.source_commit], check=True)
+    # Shallow clone the default branch, then explicitly fetch + checkout the pinned
+    # commit. A full clone can fail against partial/lazy mirrors with
+    # "fatal: unable to read tree (<sha>)"; fetching the commit by SHA guarantees
+    # its tree/blob objects are present.
+    subprocess.run(["git", "clone", "--depth", "1", target.source_repo, str(dest)], check=True)
+    subprocess.run(["git", "-C", str(dest), "fetch", "--depth", "1", "origin", target.source_commit], check=True)
+    subprocess.run(["git", "-C", str(dest), "checkout", "--detach", target.source_commit], check=True)
     return dest
