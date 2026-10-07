@@ -1,0 +1,87 @@
+isir_version: '0.1'
+module:
+  name: OsMemRealloc
+  clocks:
+  - name: clk
+    edge: posedge
+  resets:
+  - name: rst
+    polarity: active_high
+    async: false
+    affects: all
+  state:
+  - name: nextNode
+    kind: register
+    type: bits<32>
+    initial: 0
+  - name: allocSize
+    kind: register
+    type: bits<32>
+    initial: 0
+  - name: nodeSize
+    kind: register
+    type: bits<32>
+    initial: 0
+  - name: tmpPtr
+    kind: register
+    type: bits<32>
+    initial: 0
+  rules:
+  - name: OsMemRealloc
+    action:
+    - (write nextNode 0)
+    - (write allocSize (& (sub (add (UINTPTR (add (read size) 3)) 1) 1) (^ -1 (UINTPTR
+      0))))
+    - (write nodeSize (& (field (read node) sizeAndFlag) -3758096385))
+    - (write tmpPtr 0)
+    - (OsMemReAllocSmaller (read pool) (read allocSize) (read node) (read nodeSize))
+    - (write nextNode (add (read node) (& (field (read node) sizeAndFlag) -3758096385)))
+    - (OsMemMergeNodeForReAllocBigger (read pool) (read allocSize) (read node) (read
+      nodeSize) (read nextNode))
+    - (write tmpPtr (OsMemAlloc (read pool) (read size) (read intSave)))
+    - (LOS_SpinUnlockRestore AddrOf(target=Field(base=Var(name='pool'), name='spinlock'))
+      (read intSave))
+    - (LOS_MemFree (read pool) (read tmpPtr))
+    - (LOS_SpinLockSave AddrOf(target=Field(base=Var(name='pool'), name='spinlock'))
+      AddrOf(target=Var(name='intSave')))
+    - (OsMemFree (read pool) (read node))
+  inputs:
+  - name: pool
+    direction: input
+    type: bits<32>
+  - name: ptr
+    direction: input
+    type: bits<32>
+  - name: node
+    direction: input
+    type: bits<32>
+  - name: size
+    direction: input
+    type: bits<32>
+  - name: intSave
+    direction: input
+    type: bits<32>
+  abstraction:
+    relation:
+      name: alpha
+      source: LIR
+      target: ISIR
+      map_expr: lambda sigma. { sig_nextNode := sigma.nextNode, sig_allocSize := sigma.allocSize,
+        sig_nodeSize := sigma.nodeSize, sig_tmpPtr := sigma.tmpPtr }
+      totality: true
+      notes: null
+    signals:
+    - sig_nextNode
+    - sig_allocSize
+    - sig_nodeSize
+    - sig_tmpPtr
+  properties:
+  - name: post_0
+    kind: safety
+    expression:
+      kind: always
+      operand: 'true'
+  proof_obligations:
+  - property: post_0
+    status: unproved
+    engine: model_checking

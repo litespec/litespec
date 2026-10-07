@@ -1,0 +1,56 @@
+isir_version: '0.1'
+module:
+  name: OsMemListAdd
+  clocks:
+  - name: clk
+    edge: posedge
+  resets:
+  - name: rst
+    polarity: active_high
+    async: false
+    affects: all
+  state:
+  - name: firstNode
+    kind: register
+    type: bits<32>
+    initial: 0
+  rules:
+  - name: OsMemListAdd
+    action:
+    - (write firstNode (select (field (read pool) freeList) (read listIndex)))
+    - (write (field (read firstNode) prev) (read node))
+    - (write (field (read node) prev) 0)
+    - (write (field (read node) next) (read firstNode))
+    - (write (select (field (read pool) freeList) (read listIndex)) (read node))
+    - (OsMemSetFreeListBit (read pool) (read listIndex))
+    - (write (field (field (read node) header) magic) 2882395322)
+  inputs:
+  - name: pool
+    direction: input
+    type: bits<32>
+  - name: listIndex
+    direction: input
+    type: bits<32>
+  - name: node
+    direction: input
+    type: bits<32>
+  abstraction:
+    relation:
+      name: alpha
+      source: LIR
+      target: ISIR
+      map_expr: lambda sigma. { sig_firstNode := sigma.firstNode }
+      totality: true
+      notes: null
+    signals:
+    - sig_firstNode
+  properties:
+  - name: post_0
+    kind: safety
+    expression:
+      kind: always
+      operand: 'true'
+  proof_obligations:
+  - property: post_0
+    status: unproved
+    engine: model_checking

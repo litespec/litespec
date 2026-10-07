@@ -1,0 +1,17 @@
+# LiteOS 64-bit type model: same typedefs as liteos, but word-sized = 64-bit.
+# Used by config/targets/liteos64.yaml (type_model: liteos64) as a smoke test of
+# the word-width abstraction: the source is unchanged, only ``word_bits`` differs.
+
+name: liteos64
+extends: liteos
+
+# Word width in bits for the 64-bit target. ``Nat``/``Int`` (word-sized) now lower
+# to u64; the c_to_lir typedefs (UINT8..UINT64 → Nat, …) are inherited unchanged.
+word_bits: 64
+
+# Word-sized integers are u64 on this target; Nat64/Int64 stay 64-bit.
+lir_to_rust:
+  Int: u64
+  Nat: u64
+  Nat64: u64
+  Int64: u64

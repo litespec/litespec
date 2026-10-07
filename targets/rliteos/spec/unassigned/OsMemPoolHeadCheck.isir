@@ -1,0 +1,67 @@
+isir_version: '0.1'
+module:
+  name: OsMemPoolHeadCheck
+  clocks:
+  - name: clk
+    edge: posedge
+  resets:
+  - name: rst
+    polarity: active_high
+    async: false
+    affects: all
+  state:
+  - name: tmpNode
+    kind: register
+    type: bits<32>
+    initial: 0
+  - name: index
+    kind: register
+    type: bits<32>
+    initial: 0
+  - name: flag
+    kind: register
+    type: bits<32>
+    initial: 0
+  rules:
+  - name: OsMemPoolHeadCheck
+    action:
+    - (write tmpNode 0)
+    - (write flag 0)
+    - (PRINT_ERR 0 (read pool) (read __FUNCTION__) (read __LINE__))
+    - (write index 0)
+    - (write index (add (read index) 1))
+    - (write tmpNode (select (field (read pool) freeList) (read index)))
+    - (write tmpNode (field (read tmpNode) next))
+    - (write flag 1)
+    - (PRINT_ERR 0 (read index) (read tmpNode) (field (field (field (read tmpNode)
+      header) ptr) prev) (field (read tmpNode) prev) (field (read tmpNode) next))
+    - (read __goto_OUT)
+    - (read __label_OUT)
+    - (PRINTK 0 (read pool) (field (field (read pool) info) totalSize))
+  inputs:
+  - name: pool
+    direction: input
+    type: bits<32>
+  abstraction:
+    relation:
+      name: alpha
+      source: LIR
+      target: ISIR
+      map_expr: lambda sigma. { sig_tmpNode := sigma.tmpNode, sig_index := sigma.index,
+        sig_flag := sigma.flag }
+      totality: true
+      notes: null
+    signals:
+    - sig_tmpNode
+    - sig_index
+    - sig_flag
+  properties:
+  - name: post_0
+    kind: safety
+    expression:
+      kind: always
+      operand: 'true'
+  proof_obligations:
+  - property: post_0
+    status: unproved
+    engine: model_checking

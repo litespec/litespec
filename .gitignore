@@ -1,0 +1,58 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+.venv/
+venv/
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# uv-managed caches/toolchains (redirected into the workspace)
+# (the Python pin lives in install.sh as PY_VERSION; .python-version is a local
+#  uv/pyenv artifact, so it is ignored.)
+.uv-cache/
+.uv-python/
+.uv-bin/
+.python-version
+
+# Sandbox-portable toolchain (see scripts/dev-env.sh) — re-downloadable
+.tools/
+
+# Rust
+Cargo.lock
+
+# Generated build artifacts
+output/
+artifacts/
+traces/
+*.rlib
+*.a
+*.o
+*.elf
+*.bin
+kernel_mm/
+tmp*
+temp*
+
+# Editor / OS
+.DS_Store
+*.swp
+.idea/
+.vscode/
+
+# Fetched third-party trees — all re-fetchable on demand
+# (Interscope via install.sh; LiteOS/OpenHarmony via fetch-source / repo sync)
+third_party/
+.repo-home/
+
+# Target board-support build output
+targets/rliteos/build/
+
+# Changelog
+CHANGELOG.md

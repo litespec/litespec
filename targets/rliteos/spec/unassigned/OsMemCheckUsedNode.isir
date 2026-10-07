@@ -1,0 +1,63 @@
+isir_version: '0.1'
+module:
+  name: OsMemCheckUsedNode
+  clocks:
+  - name: clk
+    edge: posedge
+  resets:
+  - name: rst
+    polarity: active_high
+    async: false
+    affects: all
+  state:
+  - name: startNode
+    kind: register
+    type: bits<32>
+    initial: 0
+  - name: endNode
+    kind: register
+    type: bits<32>
+    initial: 0
+  - name: doneFlag
+    kind: register
+    type: bits<32>
+    initial: 0
+  rules:
+  - name: OsMemCheckUsedNode
+    action:
+    - (write startNode (add (read pool) 238))
+    - (write endNode (sub (add (read pool) (field (field (read pool) info) totalSize))
+      3))
+    - (write doneFlag 0)
+    - (write doneFlag (MemCheckUsedNode (read pool) (read node) (read startNode) (read
+      endNode)))
+  inputs:
+  - name: pool
+    direction: input
+    type: bits<32>
+  - name: node
+    direction: input
+    type: bits<32>
+  abstraction:
+    relation:
+      name: alpha
+      source: LIR
+      target: ISIR
+      map_expr: lambda sigma. { sig_startNode := sigma.startNode, sig_endNode := sigma.endNode,
+        sig_doneFlag := sigma.doneFlag }
+      totality: true
+      notes: null
+    signals:
+    - sig_startNode
+    - sig_endNode
+    - sig_doneFlag
+  properties:
+  - name: post_0
+    kind: safety
+    expression:
+      kind: always
+      operand: 'true'
+  proof_obligations:
+  - property: post_0
+    status: unproved
+    engine: model_checking

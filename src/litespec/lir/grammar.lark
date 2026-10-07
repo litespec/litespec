@@ -1,0 +1,67 @@
+// LiteSpec EffectExpr grammar (§7.5). Reference grammar.
+//
+// The runtime parser in `parser.py` is a hand-written recursive-descent parser;
+// this file documents the normative grammar in Lark syntax for tooling that
+// wants a grammar-driven parser.
+
+start: effect
+
+effect: conditional
+      | let_expr
+      | quantified
+      | sequence
+      | while_expr
+      | for_expr
+      | do_while
+      | iterator_expr
+      | call_effect
+      | guard_expr
+      | return_expr
+      | simple
+
+conditional: "if" expr "then" effect "else" effect
+let_expr: "let" IDENT ":" type "=" effect "in" effect
+quantified: ("exists" | "forall") IDENT ":" type "in" domain "," effect
+sequence: "seq" "{" (effect (";" effect)*)? "}"
+while_expr: "while" expr "do" effect "od"
+for_expr: for_range | for_c
+for_range: "for" IDENT ":" type "in" expr "do" effect "od"
+for_c: "for" IDENT ":" type "=" effect ";" expr ";" effect "do" effect "od"
+do_while: "do" effect "while" expr "od"
+iterator_expr: "iterator" IDENT ":" type "in" expr "do" effect "od"
+call_effect: "call" IDENT "(" (expr ("," expr)*)? ")"
+guard_expr: "guard" expr
+return_expr: "return" expr?
+
+simple: assignment | set_update | skip | expr_stmt
+assignment: IDENT "'" "=" expr
+set_update: IDENT "'" "=" "(" IDENT "\\" "{" expr "}" ")" "\u222a" "{" expr "}"
+skip: "skip"
+expr_stmt: expr
+
+?expr: implies
+?implies: or ("implies" or)*
+?or: and ("or" and)*
+?and: compare ("and" compare)*
+?compare: add (COMPARE add)?
+?add: mul (ADD mul)*
+?mul: unary (MUL unary)*
+?unary: "not" unary | primary
+?primary: "true" -> true
+        | "false" -> false
+        | INT -> int
+        | IDENT -> var
+        | IDENT "(" (expr ("," expr)*)? ")" -> call
+        | "(" expr ")"
+
+domain: type
+type: IDENT | "List" "<" type ">" | "Set" "<" type ">" | "Map" "<" type "," type ">" | record
+record: "{" (IDENT ":" type) ("," IDENT ":" type)* "}"
+
+COMPARE: "<" | "<=" | ">" | ">=" | "=" | "!="
+ADD: "+" | "-"
+MUL: "*" | "/"
+INT: /[0-9]+/
+IDENT: /[A-Za-z_][A-Za-z0-9_]*/
+%import common.WS
+%ignore WS

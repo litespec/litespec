@@ -1,0 +1,81 @@
+isir_version: '0.1'
+module:
+  name: LOS_MemRealloc
+  clocks:
+  - name: clk
+    edge: posedge
+  resets:
+  - name: rst
+    polarity: active_high
+    async: false
+    affects: all
+  state:
+  - name: poolHead
+    kind: register
+    type: bits<32>
+    initial: 0
+  - name: node
+    kind: register
+    type: bits<32>
+    initial: 0
+  - name: newPtr
+    kind: register
+    type: bits<32>
+    initial: 0
+  - name: intSave
+    kind: register
+    type: bits<32>
+    initial: 0
+  rules:
+  - name: LOS_MemRealloc
+    action:
+    - (OsHookCall (read LOS_HOOK_TYPE_MEM_REALLOC) (read pool) (read ptr) (read size))
+    - (write size 2)
+    - (LOS_MemFree (read pool) (read ptr))
+    - (write poolHead (read pool))
+    - (write node 0)
+    - (write newPtr 0)
+    - (LOS_SpinLockSave AddrOf(target=Field(base=Var(name='poolHead'), name='spinlock'))
+      AddrOf(target=Var(name='intSave')))
+    - (write ptr (OsGetRealPtr (read pool) (read ptr)))
+    - (read __break__)
+    - (write node (sub (UINTPTR (read ptr)) 3))
+    - (read __break__)
+    - (write newPtr (OsMemRealloc (read pool) (read ptr) (read node) (read size) (read
+      intSave)))
+    - (LOS_SpinUnlockRestore AddrOf(target=Field(base=Var(name='poolHead'), name='spinlock'))
+      (read intSave))
+  inputs:
+  - name: pool
+    direction: input
+    type: bits<32>
+  - name: ptr
+    direction: input
+    type: bits<32>
+  - name: size
+    direction: input
+    type: bits<32>
+  abstraction:
+    relation:
+      name: alpha
+      source: LIR
+      target: ISIR
+      map_expr: lambda sigma. { sig_poolHead := sigma.poolHead, sig_node := sigma.node,
+        sig_newPtr := sigma.newPtr, sig_intSave := sigma.intSave }
+      totality: true
+      notes: null
+    signals:
+    - sig_poolHead
+    - sig_node
+    - sig_newPtr
+    - sig_intSave
+  properties:
+  - name: post_0
+    kind: safety
+    expression:
+      kind: always
+      operand: 'true'
+  proof_obligations:
+  - property: post_0
+    status: unproved
+    engine: model_checking

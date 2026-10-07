@@ -1,0 +1,59 @@
+isir_version: '0.1'
+module:
+  name: OsGetRealPtr
+  clocks:
+  - name: clk
+    edge: posedge
+  resets:
+  - name: rst
+    polarity: active_high
+    async: false
+    affects: all
+  state:
+  - name: realPtr
+    kind: register
+    type: bits<32>
+    initial: 0
+  - name: gapSize
+    kind: register
+    type: bits<32>
+    initial: 0
+  rules:
+  - name: OsGetRealPtr
+    action:
+    - (write realPtr (read ptr))
+    - (write gapSize Deref(ptr=BinOp(op='-', left=Call(name='UINTPTR', args=(Var(name='ptr'),)),
+      right=IntLit(value=1))))
+    - (PRINT_ERR 0 (read __FUNCTION__) (read __LINE__) (read gapSize))
+    - (write gapSize (& (read gapSize) -1073741825))
+    - (PRINT_ERR 0 (read __FUNCTION__) (read __LINE__) (read gapSize))
+    - (write realPtr (sub (UINTPTR (read ptr)) (UINTPTR (read gapSize))))
+  inputs:
+  - name: pool
+    direction: input
+    type: bits<32>
+  - name: ptr
+    direction: input
+    type: bits<32>
+  abstraction:
+    relation:
+      name: alpha
+      source: LIR
+      target: ISIR
+      map_expr: lambda sigma. { sig_realPtr := sigma.realPtr, sig_gapSize := sigma.gapSize
+        }
+      totality: true
+      notes: null
+    signals:
+    - sig_realPtr
+    - sig_gapSize
+  properties:
+  - name: post_0
+    kind: safety
+    expression:
+      kind: always
+      operand: 'true'
+  proof_obligations:
+  - property: post_0
+    status: unproved
+    engine: model_checking

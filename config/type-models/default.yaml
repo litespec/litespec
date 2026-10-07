@@ -1,0 +1,63 @@
+# Default type model: maps C types, LIR types, ISIR types, and Rust types.
+#
+# This removes target-specific type/width assumptions from the LiteSpec core.
+# Add a per-target override at config/type-models/<target>.yaml and reference it
+# from the target's `type_model` field when widths/encodings differ.
+
+name: default
+
+# void* lower to this opaque handle/index type (pointer-to-index lowering).
+c_void_pointer: Nat
+
+lir_to_isir_default: "bits<32>"
+lir_to_rust_default: ""
+
+# C type text (whitespace-collapsed, '*' stripped) -> LIR TypeExpr.
+c_to_lir:
+  unsigned: Nat
+  size_t: Nat
+  uintptr_t: Nat
+  "unsigned int": Nat
+  "unsigned char": Nat
+  "unsigned short": Nat
+  "unsigned long": Nat
+  int: Int
+  signed: Int
+  char: Int
+  short: Int
+  long: Int
+  "long long": Int
+  "signed int": Int
+  bool: Bool
+  _Bool: Bool
+  float: Rat
+  double: Rat
+  void: Unit
+
+# LIR TypeExpr -> ISIR type.
+lir_to_isir:
+  Nat: "bits<32>"
+  Int: int
+  Bool: bool
+  Rat: "bits<64>"
+  String: string
+  Unit: bool
+
+# LIR TypeExpr -> Rust type.
+# ``Nat``/``Int`` are word-sized and follow ``word_bits`` (64 → u64); ``NatN``/``IntN``
+# are fixed-width.
+lir_to_rust:
+  Nat: u64
+  Int: u64
+  Nat8: u8
+  Nat16: u16
+  Nat32: u32
+  Nat64: u64
+  Int8: u8
+  Int16: u16
+  Int32: u32
+  Int64: u64
+  Rat: f64
+  Bool: bool
+  String: String
+  Unit: "()"

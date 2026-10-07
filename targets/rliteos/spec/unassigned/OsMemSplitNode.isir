@@ -1,0 +1,70 @@
+isir_version: '0.1'
+module:
+  name: OsMemSplitNode
+  clocks:
+  - name: clk
+    edge: posedge
+  resets:
+  - name: rst
+    polarity: active_high
+    async: false
+    affects: all
+  state:
+  - name: newFreeNode
+    kind: register
+    type: bits<32>
+    initial: 0
+  - name: nextNode
+    kind: register
+    type: bits<32>
+    initial: 0
+  rules:
+  - name: OsMemSplitNode
+    action:
+    - (write newFreeNode 0)
+    - (write nextNode 0)
+    - (write newFreeNode (add (read allocNode) (read allocSize)))
+    - (write (field (field (field (read newFreeNode) header) ptr) prev) (read allocNode))
+    - (write (field (field (read newFreeNode) header) sizeAndFlag) (sub (field (read
+      allocNode) sizeAndFlag) (read allocSize)))
+    - (write (field (read allocNode) sizeAndFlag) (read allocSize))
+    - (write nextNode (add AddrOf(target=Field(base=Var(name='newFreeNode'), name='header'))
+      (& (field AddrOf(target=Field(base=Var(name='newFreeNode'), name='header'))
+      sizeAndFlag) -3758096385)))
+    - (write (field (field (read nextNode) ptr) prev) AddrOf(target=Field(base=Var(name='newFreeNode'),
+      name='header')))
+    - (OsMemFreeNodeDelete (read pool) (read nextNode))
+    - (OsMemMergeNode (read nextNode))
+    - (OsMemFreeNodeAdd (read pool) (read newFreeNode))
+  inputs:
+  - name: pool
+    direction: input
+    type: bits<32>
+  - name: allocNode
+    direction: input
+    type: bits<32>
+  - name: allocSize
+    direction: input
+    type: bits<32>
+  abstraction:
+    relation:
+      name: alpha
+      source: LIR
+      target: ISIR
+      map_expr: lambda sigma. { sig_newFreeNode := sigma.newFreeNode, sig_nextNode
+        := sigma.nextNode }
+      totality: true
+      notes: null
+    signals:
+    - sig_newFreeNode
+    - sig_nextNode
+  properties:
+  - name: post_0
+    kind: safety
+    expression:
+      kind: always
+      operand: 'true'
+  proof_obligations:
+  - property: post_0
+    status: unproved
+    engine: model_checking

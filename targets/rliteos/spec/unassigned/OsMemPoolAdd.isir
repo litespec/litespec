@@ -1,0 +1,67 @@
+isir_version: '0.1'
+module:
+  name: OsMemPoolAdd
+  clocks:
+  - name: clk
+    edge: posedge
+  resets:
+  - name: rst
+    polarity: active_high
+    async: false
+    affects: all
+  state:
+  - name: nextPool
+    kind: register
+    type: bits<32>
+    initial: 0
+  - name: curPool
+    kind: register
+    type: bits<32>
+    initial: 0
+  - name: poolEnd
+    kind: register
+    type: bits<32>
+    initial: 0
+  rules:
+  - name: OsMemPoolAdd
+    action:
+    - (write nextPool (read g_poolHead))
+    - (write curPool (read g_poolHead))
+    - (write poolEnd (add (UINTPTR (read nextPool)) (LOS_MemPoolSizeGet (read nextPool))))
+    - (PRINT_ERR 0 (read pool) (add (UINTPTR (read pool)) (read size)) (read nextPool)
+      (add (UINTPTR (read nextPool)) (LOS_MemPoolSizeGet (read nextPool))))
+    - (write curPool (read nextPool))
+    - (write nextPool (field (read nextPool) nextPool))
+    - (write g_poolHead (read pool))
+    - (write (field (read curPool) nextPool) (read pool))
+    - (write (field (read pool) nextPool) 0)
+  inputs:
+  - name: pool
+    direction: input
+    type: bits<32>
+  - name: size
+    direction: input
+    type: bits<32>
+  abstraction:
+    relation:
+      name: alpha
+      source: LIR
+      target: ISIR
+      map_expr: lambda sigma. { sig_nextPool := sigma.nextPool, sig_curPool := sigma.curPool,
+        sig_poolEnd := sigma.poolEnd }
+      totality: true
+      notes: null
+    signals:
+    - sig_nextPool
+    - sig_curPool
+    - sig_poolEnd
+  properties:
+  - name: post_0
+    kind: safety
+    expression:
+      kind: always
+      operand: 'true'
+  proof_obligations:
+  - property: post_0
+    status: unproved
+    engine: model_checking

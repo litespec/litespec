@@ -1,0 +1,57 @@
+isir_version: '0.1'
+module:
+  name: OsMemMergeNodeForReAllocBigger
+  clocks:
+  - name: clk
+    edge: posedge
+  resets:
+  - name: rst
+    polarity: active_high
+    async: false
+    affects: all
+  state: []
+  rules:
+  - name: OsMemMergeNodeForReAllocBigger
+    action:
+    - (write (field (read node) sizeAndFlag) (read nodeSize))
+    - (OsMemFreeNodeDelete (read pool) (read nextNode))
+    - (OsMemMergeNode (read nextNode))
+    - (OsMemSplitNode (read pool) (read node) (read allocSize))
+    - (write (field (read node) sizeAndFlag) (| (field (read node) sizeAndFlag) 2147483648))
+    - (OsMemWaterUsedRecord (read pool) (sub (field (read node) sizeAndFlag) (read
+      nodeSize)))
+  inputs:
+  - name: pool
+    direction: input
+    type: bits<32>
+  - name: allocSize
+    direction: input
+    type: bits<32>
+  - name: node
+    direction: input
+    type: bits<32>
+  - name: nodeSize
+    direction: input
+    type: bits<32>
+  - name: nextNode
+    direction: input
+    type: bits<32>
+  abstraction:
+    relation:
+      name: alpha
+      source: LIR
+      target: ISIR
+      map_expr: lambda sigma. { }
+      totality: true
+      notes: null
+    signals: []
+  properties:
+  - name: post_0
+    kind: safety
+    expression:
+      kind: always
+      operand: 'true'
+  proof_obligations:
+  - property: post_0
+    status: unproved
+    engine: model_checking

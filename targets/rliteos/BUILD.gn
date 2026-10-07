@@ -1,0 +1,16 @@
+# OpenHarmony build integration for the rliteos Rust crate (template).
+#
+# The ported Rust core is pre-built to a static library (librliteos.a); this
+# `static_library` links it into the kernel. Generated (or copied) from
+# config/targets/liteos.yaml → build.template by the build-manifest generator.
+#
+# NOTE: adjust the gn import path to match the OpenHarmony tree layout; this is a
+# template, not a ready-to-build file.
+
+import("//build/lite/config/component/lite_component.gni")
+
+static_library("rliteos") {
+  sources = [ "librliteos.a" ]
+  include_dirs = [ "//kernel/liteos_a" ]
+  cflags = [ "-mcpu=cortex-a15" ]
+}

@@ -1,0 +1,57 @@
+isir_version: '0.1'
+module:
+  name: OsMemInfoPrint
+  clocks:
+  - name: clk
+    edge: posedge
+  resets:
+  - name: rst
+    polarity: active_high
+    async: false
+    affects: all
+  state:
+  - name: poolInfo
+    kind: register
+    type: bits<32>
+    initial: 0
+  - name: status
+    kind: register
+    type: bits<32>
+    initial: 0
+  rules:
+  - name: OsMemInfoPrint
+    action:
+    - (write poolInfo (read pool))
+    - (write status 0)
+    - (PRINTK 0)
+    - (PRINTK 0)
+    - (PRINTK 0 (field (field (read poolInfo) info) pool) (LOS_MemPoolSizeGet (read
+      pool)) (field (read status) totalUsedSize) (field (read status) totalFreeSize)
+      (field (read status) maxFreeNodeSize) (field (read status) usedNodeNum) (field
+      (read status) freeNodeNum))
+  inputs:
+  - name: pool
+    direction: input
+    type: bits<32>
+  abstraction:
+    relation:
+      name: alpha
+      source: LIR
+      target: ISIR
+      map_expr: lambda sigma. { sig_poolInfo := sigma.poolInfo, sig_status := sigma.status
+        }
+      totality: true
+      notes: null
+    signals:
+    - sig_poolInfo
+    - sig_status
+  properties:
+  - name: post_0
+    kind: safety
+    expression:
+      kind: always
+      operand: 'true'
+  proof_obligations:
+  - property: post_0
+    status: unproved
+    engine: model_checking

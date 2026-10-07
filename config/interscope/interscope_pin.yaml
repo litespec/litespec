@@ -1,0 +1,4 @@
+interscope:
+  repo: https://github.com/ywci/interscope
+  commit: 65db05a07ffa0d653ea52698e8862bed4353a42d
+  isir_schema_version: "0.1"

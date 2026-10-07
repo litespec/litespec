@@ -1,0 +1,45 @@
+isir_version: '0.1'
+module:
+  name: LOS_MemPoolSizeGet
+  clocks:
+  - name: clk
+    edge: posedge
+  resets:
+  - name: rst
+    polarity: active_high
+    async: false
+    affects: all
+  state:
+  - name: count
+    kind: register
+    type: bits<32>
+    initial: 0
+  rules:
+  - name: LOS_MemPoolSizeGet
+    action:
+    - (write count 0)
+    - (write count (add (read count) (field (field (read pool) info) totalSize)))
+  inputs:
+  - name: pool
+    direction: input
+    type: bits<32>
+  abstraction:
+    relation:
+      name: alpha
+      source: LIR
+      target: ISIR
+      map_expr: lambda sigma. { sig_count := sigma.count }
+      totality: true
+      notes: null
+    signals:
+    - sig_count
+  properties:
+  - name: post_0
+    kind: safety
+    expression:
+      kind: always
+      operand: 'true'
+  proof_obligations:
+  - property: post_0
+    status: unproved
+    engine: model_checking

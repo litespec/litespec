@@ -1,0 +1,75 @@
+isir_version: '0.1'
+module:
+  name: LOS_ArchMmuQuery
+  clocks:
+  - name: clk
+    edge: posedge
+  resets:
+  - name: rst
+    polarity: active_high
+    async: false
+    affects: all
+  state:
+  - name: l1Entry
+    kind: register
+    type: bits<32>
+    initial: 0
+  - name: l2Entry
+    kind: register
+    type: bits<32>
+    initial: 0
+  - name: l2Base
+    kind: register
+    type: bits<32>
+    initial: 0
+  rules:
+  - name: LOS_ArchMmuQuery
+    action:
+    - (write l1Entry (OsGetPte1 (field (read archMmu) virtTtb) (read vaddr)))
+    - (write l2Base 0)
+    - (write (select (read paddr) 0) (add (MMU_DESCRIPTOR_L1_SECTION_ADDR (read l1Entry))
+      (& (read vaddr) (sub (read MMU_DESCRIPTOR_L1_SMALL_SIZE) 1))))
+    - (OsCvtSecAttsToFlags (read l1Entry) (read flags))
+    - (write l2Base (OsGetPte2BasePtr (read l1Entry)))
+    - (write l2Entry (OsGetPte2 (read l2Base) (read vaddr)))
+    - (write (select (read paddr) 0) (add (MMU_DESCRIPTOR_L2_SMALL_PAGE_ADDR (read
+      l2Entry)) (& (read vaddr) (sub (read MMU_DESCRIPTOR_L2_SMALL_SIZE) 1))))
+    - (OsCvtPte2AttsToFlags (read l1Entry) (read l2Entry) (read flags))
+    - (LOS_Panic 0 (read __FUNCTION__) (read __LINE__))
+  inputs:
+  - name: archMmu
+    direction: input
+    type: bits<32>
+  - name: vaddr
+    direction: input
+    type: bits<32>
+  - name: paddr
+    direction: input
+    type: bits<32>
+  - name: flags
+    direction: input
+    type: bits<32>
+  abstraction:
+    relation:
+      name: alpha
+      source: LIR
+      target: ISIR
+      map_expr: lambda sigma. { sig_l1Entry := sigma.l1Entry, sig_l2Entry := sigma.l2Entry,
+        sig_l2Base := sigma.l2Base }
+      totality: true
+      notes: null
+    signals:
+    - sig_l1Entry
+    - sig_l2Entry
+    - sig_l2Base
+  properties:
+  - name: post_0
+    kind: safety
+    expression:
+      kind: always
+      operand: 'true'
+  proof_obligations:
+  - property: post_0
+    status: unproved
+    engine: theorem_proving
+    backend: acl2

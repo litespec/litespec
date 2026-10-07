@@ -1,0 +1,112 @@
+# Target requirements for the LiteOS target (Phase 1 POC).
+#
+# This is the single source of truth for what the pipeline extracts, emits, and
+# completeness-checks. It supersedes the module→function lists previously
+# hardcoded in the CLI and the old config/*-layout.yaml files.
+# (the ISIR output root is `targets/rliteos/spec`, set by isir_output_dir below —
+#  a committed location, unlike the cleaned `output/` tree)
+#
+# Source retrieval: `./run.sh fetch-source liteos` clones source_repo and checks
+# out source_commit into third_party/<name>/.
+
+target:
+  name: liteos
+  port_name: rliteos   # name of the ported Rust crate/module
+  source_repo: https://gitee.com/openharmony/kernel_liteos_a
+  source_commit: 1b5d3de13bea4a93e6713f180710f2f307cad403
+  # Full OpenHarmony manifest (for `./run.sh repo-init` → `repo sync`).
+  manifest_repo: https://gitee.com/openharmony/manifest.git
+  manifest_branch: master
+  source_dir: examples
+  isir_output_dir: targets/rliteos/spec
+  rust_target_dir: targets/rliteos
+  type_model: liteos
+  # Preprocessor configuration (LOSCFG_* feature gating).
+  # Full values come from LiteOS's target_config.h; these are pilot defaults.
+  preprocess:
+    defines:
+      LOSCFG_SYS_EXTERNAL_HEAP: 0
+      LOSCFG_MEM_MUL_POOL: 0
+      LOSCFG_TASK_MEM_USED: 1
+      LOSCFG_MEM_FREE_BY_TASKID: 0
+      LOSCFG_KERNEL_LMK: 0
+      LOSCFG_KERNEL_MMU: 1
+      LOSCFG_KERNEL_SMP: 1
+      LOSCFG_KERNEL_SMP_CORE_NUM: 1
+      LOSCFG_KERNEL_PM: 1
+    # Section-attribute macros defined empty (they annotate symbols, not logic).
+    empty_macros:
+      - LITE_OS_SEC_TEXT
+      - LITE_OS_SEC_TEXT_MINOR
+      - LITE_OS_SEC_DATA
+      - LITE_OS_SEC_BSS
+      - LITE_OS_SEC_DATA_MINOR
+      - LITE_OS_SEC_BSS_MINOR
+    include_dirs: []
+  # Memory-mapped I/O: C macro names for volatile device reads/writes.
+  mmio:
+    read_macros: [READ_UINT32]
+    write_macros: [WRITE_UINT32]
+  # Target integration (board/arch support) — paths are relative to the repo root
+  # and resolved by litespec.targets.loader (targets/rliteos/…).
+  arch:
+    target_triple: armv7a-none-eabi
+    mcpu: cortex-a15
+    asm_files:
+      - targets/rliteos/arch/reset_vector.S
+      - targets/rliteos/arch/task_switch.S
+    linker_script: targets/rliteos/liteos.ld
+    uart_stub: targets/rliteos/drivers/uart_pl011.rs
+  # Arch-neutral interface contracts: each entry point is checked against the same
+  # observable contract so arch/x86, arch/riscv, arch/arm can be shown equivalent
+  # by conformance (see litespec.equivalence.contracts).
+  interface:
+    contracts:
+      - fn: LOS_ArchMmuQuery
+        spec: mmu_query
+  # Memory / page-table descriptor model (arch-declared). Drives the arch-neutral
+  # mmu_query contract so a 64-bit or RISC-V/x86 target declares the same fields with
+  # different values instead of shipping different walk code. Values below mirror the
+  # ARMv6/v7 two-level descriptors in los_mmu_descriptor_v6.h.
+  memory:
+    page_size: 0x1000
+    pte_bits: 32
+    l1_index_shift: 20            # L1 index = vaddr >> 20
+    l1_type_mask: 0x3             # low 2 bits discriminate the L1 descriptor type
+    l1_section_type: 0x2          # L1 section descriptor
+    l1_section_frame: 0xFFF00000  # section base = entry & frame
+    l1_section_offset_mask: 0xFFFFF  # section offset = vaddr & mask
+    l2_index_shift: 12            # L2 index = (vaddr & l1_section_offset_mask) >> 12
+    l2_small_page_type: 0x2       # L2 small-page descriptor
+    l2_small_page_frame: 0xFFFFF000  # small-page base = entry & frame
+    l2_small_page_offset_mask: 0xFFF  # small-page offset = vaddr & mask
+  build:
+    build_system: gn
+    template: targets/rliteos/BUILD.gn
+  qemu:
+    machine: virt
+    cpu: cortex-a15
+    memory: 128M
+  # Unique command entry point for this target (asm/build/clean/qemu); the
+  # top-level ./run.sh delegates target commands to it.
+  entrypoint: targets/rliteos/run.sh
+  modules:
+    kernel_mm:     [LOS_MemAlloc, LOS_MemFree, LOS_MemAllocAlign]
+    kernel_sched:  [LOS_Schedule]
+    kernel_ipc:    [LOS_QueueWrite]
+    kernel_pm:     [LOS_PmSuspend]
+    kernel_vm:     [LOS_ArchMmuQuery]
+    # Deferred (no in-tree source at commit 1b5d3de):
+    #   kernel_syscall: [LOS_SyscallDispatch]   # dispatch is asm/driver, not a C fn
+    #   gpu_drm:       [DRM_Submit]             # separate OpenHarmony service
+  # Testing configuration for the generic verification pipeline.
+  testing:
+    differential:
+      compiler: clang
+      input_domains: [0, 1, 2, 7, 64, 128]
+      max_inputs: 64
+    coverage:
+      fail_on_mismatch: true
+      required_differential: []   # functions that MUST be differentially verified
+    generated_tests:
+      output: tests/generated/test_liteos.py

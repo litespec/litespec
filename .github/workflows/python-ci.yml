@@ -1,0 +1,24 @@
+name: python-ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          python-version: "3.12"
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: armv7a-none-eabi
+      - name: Install C/Rust/QEMU toolchain
+        run: sudo apt-get update && sudo apt-get install -y clang lld qemu-system-arm
+      - run: ./install.sh --python-only
+      - run: ./run.sh fetch-source liteos
+      - run: ./run.sh test
+      - run: ./run.sh conformance

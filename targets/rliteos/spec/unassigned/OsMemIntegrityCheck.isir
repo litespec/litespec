@@ -1,0 +1,58 @@
+isir_version: '0.1'
+module:
+  name: OsMemIntegrityCheck
+  clocks:
+  - name: clk
+    edge: posedge
+  resets:
+  - name: rst
+    polarity: active_high
+    async: false
+    affects: all
+  state:
+  - name: endNode
+    kind: register
+    type: bits<32>
+    initial: 0
+  rules:
+  - name: OsMemIntegrityCheck
+    action:
+    - (write endNode (sub (add (read pool) (field (field (read pool) info) totalSize))
+      3))
+    - (OsMemPoolHeadCheck (read pool))
+    - (write (select (read preNode) 0) (add (read pool) 238))
+    - (write (select (read tmpNode) 0) Deref(ptr=Var(name='preNode')))
+    - (write (select (read tmpNode) 0) (add Deref(ptr=Var(name='tmpNode')) (& (field
+      Deref(ptr=Var(name='tmpNode')) sizeAndFlag) -3758096385)))
+    - (write (select (read preNode) 0) Deref(ptr=Var(name='tmpNode')))
+    - (read __break__)
+  inputs:
+  - name: pool
+    direction: input
+    type: bits<32>
+  - name: tmpNode
+    direction: input
+    type: bits<32>
+  - name: preNode
+    direction: input
+    type: bits<32>
+  abstraction:
+    relation:
+      name: alpha
+      source: LIR
+      target: ISIR
+      map_expr: lambda sigma. { sig_endNode := sigma.endNode }
+      totality: true
+      notes: null
+    signals:
+    - sig_endNode
+  properties:
+  - name: post_0
+    kind: safety
+    expression:
+      kind: always
+      operand: 'true'
+  proof_obligations:
+  - property: post_0
+    status: unproved
+    engine: model_checking

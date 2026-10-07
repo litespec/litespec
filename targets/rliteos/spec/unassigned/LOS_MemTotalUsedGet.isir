@@ -1,0 +1,78 @@
+isir_version: '0.1'
+module:
+  name: LOS_MemTotalUsedGet
+  clocks:
+  - name: clk
+    edge: posedge
+  resets:
+  - name: rst
+    polarity: active_high
+    async: false
+    affects: all
+  state:
+  - name: tmpNode
+    kind: register
+    type: bits<32>
+    initial: 0
+  - name: poolInfo
+    kind: register
+    type: bits<32>
+    initial: 0
+  - name: endNode
+    kind: register
+    type: bits<32>
+    initial: 0
+  - name: memUsed
+    kind: register
+    type: bits<32>
+    initial: 0
+  - name: intSave
+    kind: register
+    type: bits<32>
+    initial: 0
+  rules:
+  - name: LOS_MemTotalUsedGet
+    action:
+    - (write tmpNode 0)
+    - (write poolInfo (read pool))
+    - (write endNode 0)
+    - (write memUsed 0)
+    - (LOS_SpinLockSave AddrOf(target=Field(base=Var(name='poolInfo'), name='spinlock'))
+      AddrOf(target=Var(name='intSave')))
+    - (write endNode (sub (add (read pool) (field (field (read poolInfo) info) totalSize))
+      3))
+    - (write tmpNode (add (read pool) 238))
+    - (write memUsed (add (read memUsed) (& (field (read tmpNode) sizeAndFlag) -3758096385)))
+    - (write tmpNode (add (read tmpNode) (& (field (read tmpNode) sizeAndFlag) -3758096385)))
+    - (LOS_SpinUnlockRestore AddrOf(target=Field(base=Var(name='poolInfo'), name='spinlock'))
+      (read intSave))
+  inputs:
+  - name: pool
+    direction: input
+    type: bits<32>
+  abstraction:
+    relation:
+      name: alpha
+      source: LIR
+      target: ISIR
+      map_expr: lambda sigma. { sig_tmpNode := sigma.tmpNode, sig_poolInfo := sigma.poolInfo,
+        sig_endNode := sigma.endNode, sig_memUsed := sigma.memUsed, sig_intSave :=
+        sigma.intSave }
+      totality: true
+      notes: null
+    signals:
+    - sig_tmpNode
+    - sig_poolInfo
+    - sig_endNode
+    - sig_memUsed
+    - sig_intSave
+  properties:
+  - name: post_0
+    kind: safety
+    expression:
+      kind: always
+      operand: 'true'
+  proof_obligations:
+  - property: post_0
+    status: unproved
+    engine: model_checking

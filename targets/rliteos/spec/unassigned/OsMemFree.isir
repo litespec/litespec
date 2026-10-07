@@ -1,0 +1,68 @@
+isir_version: '0.1'
+module:
+  name: OsMemFree
+  clocks:
+  - name: clk
+    edge: posedge
+  resets:
+  - name: rst
+    polarity: active_high
+    async: false
+    affects: all
+  state:
+  - name: ret
+    kind: register
+    type: bits<32>
+    initial: 0
+  - name: preNode
+    kind: register
+    type: bits<32>
+    initial: 0
+  - name: nextNode
+    kind: register
+    type: bits<32>
+    initial: 0
+  rules:
+  - name: OsMemFree
+    action:
+    - (write ret (OsMemCheckUsedNode (read pool) (read node)))
+    - (PRINT_ERR 0)
+    - (write (field (read node) sizeAndFlag) (& (field (read node) sizeAndFlag) -3758096385))
+    - (write preNode (field (field (read node) ptr) prev))
+    - (OsMemFreeNodeDelete (read pool) (read preNode))
+    - (OsMemMergeNode (read node))
+    - (write node (read preNode))
+    - (write nextNode (add (read node) (& (field (read node) sizeAndFlag) -3758096385)))
+    - (OsMemFreeNodeDelete (read pool) (read nextNode))
+    - (OsMemMergeNode (read nextNode))
+    - (OsMemFreeNodeAdd (read pool) (read node))
+  inputs:
+  - name: pool
+    direction: input
+    type: bits<32>
+  - name: node
+    direction: input
+    type: bits<32>
+  abstraction:
+    relation:
+      name: alpha
+      source: LIR
+      target: ISIR
+      map_expr: lambda sigma. { sig_ret := sigma.ret, sig_preNode := sigma.preNode,
+        sig_nextNode := sigma.nextNode }
+      totality: true
+      notes: null
+    signals:
+    - sig_ret
+    - sig_preNode
+    - sig_nextNode
+  properties:
+  - name: post_0
+    kind: safety
+    expression:
+      kind: always
+      operand: 'true'
+  proof_obligations:
+  - property: post_0
+    status: unproved
+    engine: model_checking

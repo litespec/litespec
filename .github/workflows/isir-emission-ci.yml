@@ -1,0 +1,19 @@
+name: isir-emission-ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  isir:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          python-version: "3.12"
+      - run: ./install.sh --python-only
+      - run: ./run.sh fetch-source liteos
+      - run: ./run.sh emit-isir third_party/liteos/kernel/base/mem/tlsf/los_memory.c LOS_MemAlloc
+      - run: test -f targets/rliteos/spec/kernel_mm/LOS_MemAlloc.isir

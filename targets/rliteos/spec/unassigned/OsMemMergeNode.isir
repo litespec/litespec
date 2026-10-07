@@ -1,0 +1,49 @@
+isir_version: '0.1'
+module:
+  name: OsMemMergeNode
+  clocks:
+  - name: clk
+    edge: posedge
+  resets:
+  - name: rst
+    polarity: active_high
+    async: false
+    affects: all
+  state:
+  - name: nextNode
+    kind: register
+    type: bits<32>
+    initial: 0
+  rules:
+  - name: OsMemMergeNode
+    action:
+    - (write nextNode 0)
+    - (write (field (field (field (read node) ptr) prev) sizeAndFlag) (add (field
+      (field (field (read node) ptr) prev) sizeAndFlag) (field (read node) sizeAndFlag)))
+    - (write nextNode (add (UINTPTR (read node)) (field (read node) sizeAndFlag)))
+    - (write (field (field (read nextNode) ptr) prev) (field (field (read node) ptr)
+      prev))
+  inputs:
+  - name: node
+    direction: input
+    type: bits<32>
+  abstraction:
+    relation:
+      name: alpha
+      source: LIR
+      target: ISIR
+      map_expr: lambda sigma. { sig_nextNode := sigma.nextNode }
+      totality: true
+      notes: null
+    signals:
+    - sig_nextNode
+  properties:
+  - name: post_0
+    kind: safety
+    expression:
+      kind: always
+      operand: 'true'
+  proof_obligations:
+  - property: post_0
+    status: unproved
+    engine: model_checking

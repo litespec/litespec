@@ -1,0 +1,17 @@
+name: interscope-integration-ci
+
+# Heavy (clones InterScope + installs opam/Kōika/ACL2 and configures the LLM
+# endpoint), so it is manual-only rather than part of every push/PR.
+on:
+  workflow_dispatch:
+
+jobs:
+  interscope:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          python-version: "3.12"
+      - run: ./install.sh --interscope-only
+      - run: ./run.sh pin

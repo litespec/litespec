@@ -1,0 +1,76 @@
+isir_version: '0.1'
+module:
+  name: OsMemNodeInfo
+  clocks:
+  - name: clk
+    edge: posedge
+  resets:
+  - name: rst
+    polarity: active_high
+    async: false
+    affects: all
+  state:
+  - name: usedNode
+    kind: register
+    type: bits<32>
+    initial: 0
+  - name: freeNode
+    kind: register
+    type: bits<32>
+    initial: 0
+  rules:
+  - name: OsMemNodeInfo
+    action:
+    - (write usedNode 0)
+    - (write freeNode 0)
+    - (PRINTK 0)
+    - (write usedNode (read tmpNode))
+    - (PRINTK 0 (field (field (field (read usedNode) header) ptr) prev) (field (field
+      (read usedNode) header) magic) (field (field (read usedNode) header) sizeAndFlag))
+    - (write freeNode (read tmpNode))
+    - (PRINTK 0 (field (field (field (read freeNode) header) ptr) prev) (field (read
+      freeNode) next) (field (read freeNode) prev) (field (field (read freeNode) header)
+      magic) (field (field (read freeNode) header) sizeAndFlag))
+    - (write usedNode (read preNode))
+    - (PRINTK 0 (field (field (field (read usedNode) header) ptr) prev) (field (field
+      (read usedNode) header) magic) (field (field (read usedNode) header) sizeAndFlag))
+    - (write freeNode (read preNode))
+    - (PRINTK 0 (field (field (field (read freeNode) header) ptr) prev) (field (read
+      freeNode) next) (field (read freeNode) prev) (field (field (read freeNode) header)
+      magic) (field (field (read freeNode) header) sizeAndFlag))
+    - (PRINTK 0)
+    - (PRINTK 0 (read tmpNode) (add (UINTPTR (read tmpNode)) 64))
+    - (OsDumpMemByte 64 (UINTPTR (read tmpNode)))
+    - (PRINTK 0)
+    - (PRINTK 0 (sub (UINTPTR (read tmpNode)) 64) (read tmpNode))
+    - (OsDumpMemByte 64 (sub (UINTPTR (read tmpNode)) 64))
+    - (PRINTK 0)
+  inputs:
+  - name: tmpNode
+    direction: input
+    type: bits<32>
+  - name: preNode
+    direction: input
+    type: bits<32>
+  abstraction:
+    relation:
+      name: alpha
+      source: LIR
+      target: ISIR
+      map_expr: lambda sigma. { sig_usedNode := sigma.usedNode, sig_freeNode := sigma.freeNode
+        }
+      totality: true
+      notes: null
+    signals:
+    - sig_usedNode
+    - sig_freeNode
+  properties:
+  - name: post_0
+    kind: safety
+    expression:
+      kind: always
+      operand: 'true'
+  proof_obligations:
+  - property: post_0
+    status: unproved
+    engine: model_checking

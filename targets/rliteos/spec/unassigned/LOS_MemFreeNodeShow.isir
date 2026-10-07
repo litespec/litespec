@@ -1,0 +1,101 @@
+isir_version: '0.1'
+module:
+  name: LOS_MemFreeNodeShow
+  clocks:
+  - name: clk
+    edge: posedge
+  resets:
+  - name: rst
+    polarity: active_high
+    async: false
+    affects: all
+  state:
+  - name: poolInfo
+    kind: register
+    type: bits<32>
+    initial: 0
+  - name: node
+    kind: register
+    type: bits<32>
+    initial: 0
+  - name: countNum
+    kind: register
+    type: bits<32>
+    initial: 0
+  - name: index
+    kind: register
+    type: bits<32>
+    initial: 0
+  - name: intSave
+    kind: register
+    type: bits<32>
+    initial: 0
+  - name: val
+    kind: register
+    type: bits<32>
+    initial: 0
+  - name: offset
+    kind: register
+    type: bits<32>
+    initial: 0
+  rules:
+  - name: LOS_MemFreeNodeShow
+    action:
+    - (write poolInfo (read pool))
+    - (PRINT_ERR 0 (read poolInfo) (read __LINE__))
+    - (write node 0)
+    - (write countNum 0)
+    - (LOS_SpinLockSave AddrOf(target=Field(base=Var(name='poolInfo'), name='spinlock'))
+      AddrOf(target=Var(name='intSave')))
+    - (write index 0)
+    - (write index (add (read index) 1))
+    - (write node (select (field (read poolInfo) freeList) (read index)))
+    - (write node (field (read node) next))
+    - (write (select (read countNum) (read index)) (add (select (read countNum) (read
+      index)) 1))
+    - (LOS_SpinUnlockRestore AddrOf(target=Field(base=Var(name='poolInfo'), name='spinlock'))
+      (read intSave))
+    - (PRINTK 0)
+    - (write index 0)
+    - (write index (add (read index) 1))
+    - (read __continue__)
+    - (PRINTK 0 (read index))
+    - (PRINTK 0 (<< (add (read index) 1) 2) (select (read countNum) (read index)))
+    - (write val (<< 1 (add (>> (sub (read index) 31) 3) 7)))
+    - (write offset (>> (read val) 3))
+    - (PRINTK 0 (add (mul (read offset) (mod (sub (read index) 31) 8)) (read val))
+      (sub (add (mul (read offset) (add (mod (sub (read index) 31) 8) 1)) (read val))
+      1) (select (read countNum) (read index)))
+    - (PRINTK 0)
+  inputs:
+  - name: pool
+    direction: input
+    type: bits<32>
+  abstraction:
+    relation:
+      name: alpha
+      source: LIR
+      target: ISIR
+      map_expr: lambda sigma. { sig_poolInfo := sigma.poolInfo, sig_node := sigma.node,
+        sig_countNum := sigma.countNum, sig_index := sigma.index, sig_intSave := sigma.intSave,
+        sig_val := sigma.val, sig_offset := sigma.offset }
+      totality: true
+      notes: null
+    signals:
+    - sig_poolInfo
+    - sig_node
+    - sig_countNum
+    - sig_index
+    - sig_intSave
+    - sig_val
+    - sig_offset
+  properties:
+  - name: post_0
+    kind: safety
+    expression:
+      kind: always
+      operand: 'true'
+  proof_obligations:
+  - property: post_0
+    status: unproved
+    engine: model_checking

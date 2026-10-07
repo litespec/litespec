@@ -1,0 +1,35 @@
+# kernel_sched — the LiteOS scheduler (Phase 10 expansion, v0.28.3).
+#
+# Minimal conformance surface: declares the module + the in-scope function with its
+# contract. The full decomposition/state-machine detail is elaborated as the spec
+# matures; this document is the §2 conformance target.
+litespec_version: "0.28.3"
+
+profile:
+  name: "litespec-liteos"
+  version: "1.0.0"
+
+module:
+  name: "kernel_sched"
+  display_name: "Kernel Scheduler"
+  phase: "lightweight"
+  module_type: "kernel"
+  source_repo: "https://gitee.com/openharmony/kernel_liteos_a"
+  source_commit: "1b5d3de13bea4a93e6713f180710f2f307cad403"
+  extraction_timestamp: "2025-01-01T00:00:00Z"
+  extractor: "litespec-extractor"
+
+specs:
+  - id: "sched_001"
+    title: "LOS_Schedule — dispatch the highest-priority ready task"
+    category: "requirement"
+    priority: "high"
+    record_phase: "phase_1"
+    source:
+      file: "kernel/base/sched/los_sched.c"
+      function: "LOS_Schedule"
+    contract:
+      preconditions: []
+      postconditions: []
+      invariants:
+        - { expression: "g_schedRunqueue != null", description: "The scheduler runqueue is initialized" }

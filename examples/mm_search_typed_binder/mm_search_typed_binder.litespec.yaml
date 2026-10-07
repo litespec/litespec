@@ -1,0 +1,411 @@
+# §18.1 Extended Example — `mm_search_typed_binder` (Volume 1, v0.28.3).
+# A bounded C-style for-loop with typed binders, desugared by ForCLoweringPass
+# (Stage 2) into SequenceExpr([init, WhileExpr(guard, SequenceExpr([body, step]))]).
+litespec_version: "0.28.3"
+
+profile:
+  name: "litespec-liteos"
+  version: "1.0.0"
+
+module:
+  name: "kernel_mm"
+  display_name: "Kernel Memory Management"
+  phase: "lightweight"
+  module_type: "kernel"
+  source_repo: "https://gitee.com/openharmony/kernel_liteos_m"
+  source_commit: "0000000000000000000000000000000000000000"
+  extraction_timestamp: "2025-01-01T00:00:00Z"
+  extractor: "litespec-extractor"
+
+specs:
+  - id: "mm_search_typed_binder"
+    title: "Bounded C-style loop with typed binders"
+    category: "requirement"
+    priority: "high"
+    record_phase: "phase_1"
+    source:
+      file: "kernel/mm/los_memory.c"
+      function: "LOS_MemSearchBounded"
+      line_range: [220, 260]
+      excerpt: |
+        void *LOS_MemSearchBounded(void *pool, UINT32 limit) { ... }
+      context_note: |
+        The C-style for loop at line 230 retains its binder types from
+        the source. The cursor binder is `Block`, and the bound binder is
+        `Nat`. The `ForCExpr` is retained through Stage 1 and desugared by
+        the `ForCLoweringPass` at Stage 2. The desugared form is
+        SequenceExpr([init, WhileExpr(guard, SequenceExpr([body, step]))]),
+        which contributes two seq-nodes to the top-level path DAG.
+        `Block` is declared in LIRSpec.type_declarations.
+        global_props is ⊥ per Rule 9.17b.
+    contract:
+      preconditions:
+        - { expression: "pool != null", description: "Pool is non-null" }
+        - { expression: "limit > 0", description: "Limit is positive" }
+      postconditions:
+        - { expression: "cursor = null or cursor.offset <= limit",
+            description: "Search terminates within the limit or finds a candidate" }
+      invariants: []
+      loop_invariants:
+        - { family: "shape",    expr: "cursor in free_list or cursor = null", scope: "all" }
+        - { family: "boundary", expr: "progress < limit", scope: "all" }
+        - { family: "rank",     expr: "limit - progress >= 0", scope: "driver" }
+      abi_compatibility:
+        entries:
+          - name: "LOS_MemSearchBounded"
+            return_value_semantics: "NULL indicates no candidate."
+            error_codes: ["LOS_ERRNO_MM_NULL"]
+            parameter_order: ["pool", "limit"]
+            calling_convention: "cdecl"
+    state_machine:
+      state_variables:
+        - { name: "pool",     type: "Nat",         description: "Pool identifier" }
+        - { name: "free_list", type: "List<Block>", description: "Free list" }
+        - { name: "cursor",   type: "Block",       description: "Search cursor" }
+        - { name: "progress", type: "Nat",         description: "Iteration counter" }
+      init:
+        description: "Initial state"
+        expression: "free_list != [] and progress = 0"
+      actions:
+        - name: "bounded_search"
+          trigger: "call"
+          guard: "limit > 0"
+          effect: |
+            for progress:Nat = 0; progress < limit; progress' = progress + 1 do
+              cursor' = advance_cursor(cursor)
+            od
+          context: "thread"
+          max_stack_depth: 8
+    abstraction:
+      relation:
+        name: "alpha_search"
+        source: "LIR"
+        target: "ISIR"
+        map_expr: "lambda sigma. { sig_cursor := sigma.cursor }"
+        totality: true
+      layers: ["A1", "A3"]
+      refinement_target:
+        isir_id: "mm_search_bounded_isir"
+        transition_ref: "tc_search_bounded"
+        signal_scope: ["sig_cursor"]
+      function_technique: "contract"
+    decomposition:
+      should_decompose: true
+      effective_correctness: "partial"
+      exit_state_model:
+        enabled: false
+        return_targets: []
+        break_targets: []
+        continue_targets: []
+      parent_triple:
+        command_ref: { function: "LOS_MemSearchBounded", node_id: "L_c_loop" }
+        pre:  { expression: "pool != null and limit > 0",
+                description: "Parent precondition" }
+        post: { expression: "cursor = null or cursor.offset <= limit",
+                description: "Parent postcondition" }
+        rule:
+          rule: "seq"
+          premise_refs:
+            - { sub_part: "seq_part_1", role: "premise" }
+            - { sub_part: "seq_part_2", role: "premise" }
+          intermediate_ref:
+            owner: "interface"
+            owner_ref: "seq_part_1__seq_part_2"
+            kind: "normal_post"
+            ref: "R_init_done"
+          conclusion_ref: { sub_part: "__parent__", role: "parent" }
+        exit_state: null
+        control_flow: { members: ["normal"] }
+      sub_parts:
+        - name: "seq_part_1"
+          kind: "seq_segment"
+          lir_fragment: { function: "LOS_MemSearchBounded", node_id: "L_c_loop::init" }
+          properties:
+            - { kind: "explicit", property: "safety", expr: "progress = 0" }
+          technique: "contract"
+          required_layers: ["A1", "A3"]
+          hoare_triple:
+            sub_part_ref: "seq_part_1"
+            command_ref: { function: "LOS_MemSearchBounded", node_id: "L_c_loop::init" }
+            pre:  { expression: "pool != null and limit > 0",
+                    description: "Init entry" }
+            post: { expression: "R_init_done",
+                    description: "Init exit: progress = 0" }
+            rule:
+              rule: "assign"
+              premise_refs: []
+              intermediate_ref: null
+              conclusion_ref: { sub_part: "seq_part_1", role: "conclusion" }
+            control_flow: { members: ["normal"] }
+        - name: "seq_part_2"
+          kind: "seq_segment"
+          lir_fragment: { function: "LOS_MemSearchBounded", node_id: "L_c_loop::loop" }
+          properties:
+            - { kind: "explicit", property: "termination",
+                expr: "limit - progress >= 0" }
+          technique: "contract"
+          required_layers: ["A1", "A3"]
+          hoare_triple:
+            sub_part_ref: "seq_part_2"
+            command_ref: { function: "LOS_MemSearchBounded", node_id: "L_c_loop::loop" }
+            pre:  { expression: "R_init_done", description: "Loop entry" }
+            post: { expression: "cursor = null or cursor.offset <= limit",
+                    description: "Loop exit" }
+            rule:
+              rule: "while"
+              premise_refs:
+                - { sub_part: "seq_part_2::while_body", role: "premise" }
+              intermediate_ref:
+                owner: "interface"
+                owner_ref: "seq_part_2::while_body__seq_part_2::while_header"
+                kind: "invariant"
+                ref: "I_search_bounded"
+              conclusion_ref: { sub_part: "seq_part_2", role: "conclusion" }
+            exit_state: null
+            control_flow: { members: ["normal"] }
+        - name: "seq_part_2::while_header"
+          kind: "while_header"
+          lir_fragment: { function: "LOS_MemSearchBounded",
+                          node_id: "L_c_loop::loop::while_header" }
+          properties: []
+          technique: "contract"
+          required_layers: ["A1", "A3"]
+          hoare_triple:
+            sub_part_ref: "seq_part_2::while_header"
+            command_ref: { function: "LOS_MemSearchBounded",
+                           node_id: "L_c_loop::loop::while_header" }
+            pre:  { expression: "I_search_bounded and progress < limit",
+                    description: "Header entry" }
+            post: { expression: "I_search_bounded and progress < limit",
+                    description: "Header exit" }
+            rule:
+              rule: "skip"
+              premise_refs: []
+              intermediate_ref: null
+              conclusion_ref: { sub_part: "seq_part_2::while_header", role: "conclusion" }
+            control_flow: { members: ["normal"] }
+        - name: "seq_part_2::while_body"
+          kind: "while_body"
+          lir_fragment: { function: "LOS_MemSearchBounded",
+                          node_id: "L_c_loop::loop::while_body" }
+          properties: []
+          technique: "contract"
+          required_layers: ["A1", "A3"]
+          hoare_triple:
+            sub_part_ref: "seq_part_2::while_body"
+            command_ref: { function: "LOS_MemSearchBounded",
+                           node_id: "L_c_loop::loop::while_body" }
+            pre:  { expression: "I_search_bounded and progress < limit",
+                    description: "Body entry" }
+            post: { expression: "I_search_bounded",
+                    description: "Body exit" }
+            rule:
+              rule: "seq"
+              premise_refs:
+                - { sub_part: "seq_part_2::while_body::seq_seg_1", role: "premise" }
+                - { sub_part: "seq_part_2::while_body::seq_seg_2", role: "premise" }
+              intermediate_ref:
+                owner: "interface"
+                owner_ref: "seq_part_2::while_body::seq_seg_1__seq_part_2::while_body::seq_seg_2"
+                kind: "normal_post"
+                ref: "R_body_seg_1_done"
+              conclusion_ref: { sub_part: "seq_part_2::while_body", role: "conclusion" }
+            exit_state: null
+            control_flow: { members: ["normal"] }
+        - name: "seq_part_2::while_body::seq_seg_1"
+          kind: "seq_segment"
+          lir_fragment: { function: "LOS_MemSearchBounded",
+                          node_id: "L_c_loop::loop::while_body::seg_1" }
+          properties: []
+          technique: "contract"
+          required_layers: ["A1", "A3"]
+          hoare_triple:
+            sub_part_ref: "seq_part_2::while_body::seq_seg_1"
+            command_ref: { function: "LOS_MemSearchBounded",
+                           node_id: "L_c_loop::loop::while_body::seg_1" }
+            pre:  { expression: "I_search_bounded and progress < limit",
+                    description: "Segment 1 entry (body)" }
+            post: { expression: "R_body_seg_1_done",
+                    description: "Segment 1 exit" }
+            rule:
+              rule: "assign"
+              premise_refs: []
+              intermediate_ref: null
+              conclusion_ref: { sub_part: "seq_part_2::while_body::seq_seg_1",
+                                role: "conclusion" }
+            control_flow: { members: ["normal"] }
+        - name: "seq_part_2::while_body::seq_seg_2"
+          kind: "seq_segment"
+          lir_fragment: { function: "LOS_MemSearchBounded",
+                          node_id: "L_c_loop::loop::while_body::seg_2" }
+          properties: []
+          technique: "contract"
+          required_layers: ["A1", "A3"]
+          hoare_triple:
+            sub_part_ref: "seq_part_2::while_body::seq_seg_2"
+            command_ref: { function: "LOS_MemSearchBounded",
+                           node_id: "L_c_loop::loop::while_body::seg_2" }
+            pre:  { expression: "R_body_seg_1_done",
+                    description: "Segment 2 entry (step)" }
+            post: { expression: "I_search_bounded",
+                    description: "Segment 2 exit" }
+            rule:
+              rule: "assign"
+              premise_refs: []
+              intermediate_ref: null
+              conclusion_ref: { sub_part: "seq_part_2::while_body::seq_seg_2",
+                                role: "conclusion" }
+            control_flow: { members: ["normal"] }
+        - name: "seq_part_2::while_exit"
+          kind: "while_exit"
+          lir_fragment: { function: "LOS_MemSearchBounded",
+                          node_id: "L_c_loop::loop::while_exit" }
+          properties: []
+          technique: "contract"
+          required_layers: ["A1", "A3"]
+          hoare_triple:
+            sub_part_ref: "seq_part_2::while_exit"
+            command_ref: { function: "LOS_MemSearchBounded",
+                           node_id: "L_c_loop::loop::while_exit" }
+            pre:  { expression: "I_search_bounded and not (progress < limit)",
+                    description: "Exit entry" }
+            post: { expression: "cursor = null or cursor.offset <= limit",
+                    description: "Exit exit" }
+            rule:
+              rule: "skip"
+              premise_refs: []
+              intermediate_ref: null
+              conclusion_ref: { sub_part: "seq_part_2::while_exit", role: "conclusion" }
+            control_flow: { members: ["normal"] }
+      property_lattice:
+        order:
+          - ["termination", "liveness"]
+          - ["safety", "liveness"]
+        notes: "Sub-order of canonical lattice; specific properties on the left."
+      interface_checks:
+        - id: "seq_part_1__seq_part_2"
+          caller: "seq_part_1"
+          callee: "seq_part_2"
+          relation_kind: "sequence"
+          required: ["safety"]
+          provided: ["safety", "termination"]
+          evidence: { kind: "proof", uri: "evidence/mm_search_iface.json",
+                      hash: "$hash_bindings.3" }
+          intermediate_assertion:
+            expression: "R_init_done"
+            description: "Normal post of init"
+            name: "R_init_done"
+          shared_post: null
+      recombination:
+        kind: "hoare"
+        hoare_rule: "seq"
+      path_dag:
+        dag_id: "search_bounded_dag"
+        root: "n_search_root"
+        nodes:
+          - { node_id: "n_search_root", indicator: "p_search_bounded_dag_0",
+              parent: null,
+              guard: { expression: "true", description: "Function entry" },
+              kind: "entry" }
+          - { node_id: "n_seq_init", indicator: "p_search_bounded_dag_1",
+              parent: "n_search_root",
+              guard: { expression: "true",
+                       description: "Segment 1 (init) reachability" },
+              kind: "seq" }
+          - { node_id: "n_seq_loop", indicator: "p_search_bounded_dag_2",
+              parent: "n_seq_init",
+              guard: { expression: "R_init_done",
+                       description: "Segment 2 (loop) reachability" },
+              kind: "seq" }
+          - { node_id: "n_loop_body", indicator: "p_search_bounded_dag_3",
+              parent: "n_seq_loop",
+              guard: { expression: "progress < limit",
+                       description: "Loop body guard" },
+              kind: "loop_body" }
+          - { node_id: "n_loop_exit", indicator: "p_search_bounded_dag_4",
+              parent: "n_seq_loop",
+              guard: { expression: "not (progress < limit)",
+                       description: "Loop exit" },
+              kind: "loop_exit" }
+      path_dag_op:
+        dag_id: "search_bounded_dag"
+        root: "n_search_root"
+        indicator_naming: "p_<dag_id>_<i>_by_stable_topological_order"
+        canonical_hash: "$hash_bindings.1"
+        derived_smt2_hash: "$hash_bindings.2"
+        nodes:
+          - { node_id: "n_search_root", indicator: "p_search_bounded_dag_0",
+              parent: null,
+              guard: { expression: "true", description: "Function entry" },
+              kind: "entry" }
+          - { node_id: "n_seq_init", indicator: "p_search_bounded_dag_1",
+              parent: "n_search_root",
+              guard: { expression: "true",
+                       description: "Segment 1 (init) reachability" },
+              kind: "seq" }
+          - { node_id: "n_seq_loop", indicator: "p_search_bounded_dag_2",
+              parent: "n_seq_init",
+              guard: { expression: "R_init_done",
+                       description: "Segment 2 (loop) reachability" },
+              kind: "seq" }
+          - { node_id: "n_loop_body", indicator: "p_search_bounded_dag_3",
+              parent: "n_seq_loop",
+              guard: { expression: "progress < limit",
+                       description: "Loop body guard" },
+              kind: "loop_body" }
+          - { node_id: "n_loop_exit", indicator: "p_search_bounded_dag_4",
+              parent: "n_seq_loop",
+              guard: { expression: "not (progress < limit)",
+                       description: "Loop exit" },
+              kind: "loop_exit" }
+      fragment_complexity:
+        max_depth: 4
+        max_branch_cardinality: 1
+        max_disjunct_count: 0
+        path_dag_node_count: 5
+        total_fragment_nodes: 7
+    global_props: null   # Phase 1 record per Rule 9.17b
+    loop_analysis:
+      - loop_id: "bounded_search_loop"
+        function: "LOS_MemSearchBounded"
+        lir_fragment: { function: "LOS_MemSearchBounded", node_id: "L_c_loop" }
+        loop_kind: "for"
+        desugared_from: "for_c"
+        iteration_var: "progress"
+        parent_loop: null
+        inner_loops: []
+        header_state: ["progress"]
+        body_state: ["cursor", "progress"]
+        exit_state: ["progress"]
+        invariant_clauses:
+          - { family: "boundary", expr: "progress < limit", scope: "all" }
+          - { family: "rank",     expr: "limit - progress >= 0", scope: "driver" }
+        variant:
+          expr: "lambda sigma. limit - sigma.progress"
+          domain: "Nat"
+          decreases_on: "iteration"
+          well_founded: "proved"
+          evidence: { kind: "proof", uri: "evidence/search_bounded_rank.json",
+                      hash: "$hash_bindings.0" }
+        optimizations: []
+        traceability: null
+
+lir_specs:
+  - id: "mm_search_typed_binder"
+    type_declarations:
+      - { name: "Block", definition: "{ offset : Nat, size : Nat }" }
+
+hash_bindings:
+  bindings:
+    - { field: "specs[0].loop_analysis[0].variant.evidence.hash",
+        symbolic_ref: { kind: "proof", uri: "evidence/search_bounded_rank.json",
+                        hash: "0000000000000000000000000000000000000000000000000000000000000000" } }
+    - { field: "specs[0].decomposition.path_dag_op.canonical_hash",
+        symbolic_ref: { kind: "report", uri: "artifacts/mm_search_typed_binder_path_dag.canonical.json",
+                        hash: "0000000000000000000000000000000000000000000000000000000000000000" } }
+    - { field: "specs[0].decomposition.path_dag_op.derived_smt2_hash",
+        symbolic_ref: { kind: "report", uri: "artifacts/mm_search_typed_binder_path_dag.smt2",
+                        hash: "0000000000000000000000000000000000000000000000000000000000000000" } }
+    - { field: "specs[0].decomposition.interface_checks[0].evidence.hash",
+        symbolic_ref: { kind: "proof", uri: "evidence/mm_search_iface.json",
+                        hash: "0000000000000000000000000000000000000000000000000000000000000000" } }

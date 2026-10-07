@@ -1,0 +1,53 @@
+isir_version: '0.1'
+module:
+  name: MemCheckUsedNode
+  clocks:
+  - name: clk
+    edge: posedge
+  resets:
+  - name: rst
+    polarity: active_high
+    async: false
+    affects: all
+  state:
+  - name: nextNode
+    kind: register
+    type: bits<32>
+    initial: 0
+  rules:
+  - name: MemCheckUsedNode
+    action:
+    - (write nextNode (add (read node) (& (field (read node) sizeAndFlag) -3758096385)))
+  inputs:
+  - name: pool
+    direction: input
+    type: bits<32>
+  - name: node
+    direction: input
+    type: bits<32>
+  - name: startNode
+    direction: input
+    type: bits<32>
+  - name: endNode
+    direction: input
+    type: bits<32>
+  abstraction:
+    relation:
+      name: alpha
+      source: LIR
+      target: ISIR
+      map_expr: lambda sigma. { sig_nextNode := sigma.nextNode }
+      totality: true
+      notes: null
+    signals:
+    - sig_nextNode
+  properties:
+  - name: post_0
+    kind: safety
+    expression:
+      kind: always
+      operand: 'true'
+  proof_obligations:
+  - property: post_0
+    status: unproved
+    engine: model_checking

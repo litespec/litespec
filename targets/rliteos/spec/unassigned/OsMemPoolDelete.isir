@@ -1,0 +1,67 @@
+isir_version: '0.1'
+module:
+  name: OsMemPoolDelete
+  clocks:
+  - name: clk
+    edge: posedge
+  resets:
+  - name: rst
+    polarity: active_high
+    async: false
+    affects: all
+  state:
+  - name: ret
+    kind: register
+    type: bits<32>
+    initial: 0
+  - name: nextPool
+    kind: register
+    type: bits<32>
+    initial: 0
+  - name: curPool
+    kind: register
+    type: bits<32>
+    initial: 0
+  rules:
+  - name: OsMemPoolDelete
+    action:
+    - (write ret 1)
+    - (write nextPool 0)
+    - (write curPool 0)
+    - (write g_poolHead (field (read g_poolHead) nextPool))
+    - (write ret 0)
+    - (read __break__)
+    - (write curPool (read g_poolHead))
+    - (write nextPool (read g_poolHead))
+    - (write (field (read curPool) nextPool) (field (read nextPool) nextPool))
+    - (write ret 0)
+    - (read __break__)
+    - (write curPool (read nextPool))
+    - (write nextPool (field (read nextPool) nextPool))
+  inputs:
+  - name: pool
+    direction: input
+    type: bits<32>
+  abstraction:
+    relation:
+      name: alpha
+      source: LIR
+      target: ISIR
+      map_expr: lambda sigma. { sig_ret := sigma.ret, sig_nextPool := sigma.nextPool,
+        sig_curPool := sigma.curPool }
+      totality: true
+      notes: null
+    signals:
+    - sig_ret
+    - sig_nextPool
+    - sig_curPool
+  properties:
+  - name: post_0
+    kind: safety
+    expression:
+      kind: always
+      operand: 'true'
+  proof_obligations:
+  - property: post_0
+    status: unproved
+    engine: model_checking

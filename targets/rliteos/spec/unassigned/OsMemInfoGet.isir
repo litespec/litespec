@@ -1,0 +1,99 @@
+isir_version: '0.1'
+module:
+  name: OsMemInfoGet
+  clocks:
+  - name: clk
+    edge: posedge
+  resets:
+  - name: rst
+    polarity: active_high
+    async: false
+    affects: all
+  state:
+  - name: totalUsedSize
+    kind: register
+    type: bits<32>
+    initial: 0
+  - name: totalFreeSize
+    kind: register
+    type: bits<32>
+    initial: 0
+  - name: usedNodeNum
+    kind: register
+    type: bits<32>
+    initial: 0
+  - name: freeNodeNum
+    kind: register
+    type: bits<32>
+    initial: 0
+  - name: maxFreeSize
+    kind: register
+    type: bits<32>
+    initial: 0
+  - name: size
+    kind: register
+    type: bits<32>
+    initial: 0
+  rules:
+  - name: OsMemInfoGet
+    action:
+    - (write totalUsedSize 0)
+    - (write totalFreeSize 0)
+    - (write usedNodeNum 0)
+    - (write freeNodeNum 0)
+    - (write maxFreeSize 0)
+    - (write size (& (field (read node) sizeAndFlag) -3758096385))
+    - (write freeNodeNum (add (read freeNodeNum) 1))
+    - (write totalFreeSize (add (read totalFreeSize) (read size)))
+    - (write maxFreeSize (read size))
+    - (write size (& (field (read node) sizeAndFlag) -3758096385))
+    - (write usedNodeNum (add (read usedNodeNum) 1))
+    - (write totalUsedSize (add (read totalUsedSize) (read size)))
+    - (write (field (read poolStatus) totalUsedSize) (add (field (read poolStatus)
+      totalUsedSize) (read totalUsedSize)))
+    - (write (field (read poolStatus) totalFreeSize) (add (field (read poolStatus)
+      totalFreeSize) (read totalFreeSize)))
+    - (write (field (read poolStatus) maxFreeNodeSize) (MAX (field (read poolStatus)
+      maxFreeNodeSize) (read maxFreeSize)))
+    - (write (field (read poolStatus) usedNodeNum) (add (field (read poolStatus) usedNodeNum)
+      (read usedNodeNum)))
+    - (write (field (read poolStatus) freeNodeNum) (add (field (read poolStatus) freeNodeNum)
+      (read freeNodeNum)))
+  inputs:
+  - name: poolInfo
+    direction: input
+    type: bits<32>
+  - name: node
+    direction: input
+    type: bits<32>
+  - name: poolStatus
+    direction: input
+    type: bits<32>
+  abstraction:
+    relation:
+      name: alpha
+      source: LIR
+      target: ISIR
+      map_expr: lambda sigma. { sig_totalUsedSize := sigma.totalUsedSize, sig_totalFreeSize
+        := sigma.totalFreeSize, sig_usedNodeNum := sigma.usedNodeNum, sig_freeNodeNum
+        := sigma.freeNodeNum, sig_maxFreeSize := sigma.maxFreeSize, sig_size := sigma.size
+        }
+      totality: true
+      notes: null
+    signals:
+    - sig_totalUsedSize
+    - sig_totalFreeSize
+    - sig_usedNodeNum
+    - sig_freeNodeNum
+    - sig_maxFreeSize
+    - sig_size
+  properties:
+  - name: post_0
+    kind: safety
+    expression:
+      kind: always
+      operand: 'true'
+  proof_obligations:
+  - property: post_0
+    status: unproved
+    engine: model_checking

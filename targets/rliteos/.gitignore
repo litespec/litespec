@@ -1,0 +1,4 @@
+# Dynamically generated build artifacts — all under build/, removed by ./run.sh clean.
+# The checked-in "default" files are arch/*.S, liteos.ld, BUILD.gn, uart_pl011.rs,
+# run.sh, install.sh; everything below is produced by a build.
+build/

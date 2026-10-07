@@ -1,0 +1,65 @@
+# 64-bit LiteOS target — a smoke test of the word-width abstraction.
+#
+# Same kernel source and descriptors as `liteos`, but the word model is 64-bit
+# (type_model: liteos64). This exercises the config-driven word width (u64 memory
+# model, lowering, interpreter mask) without needing a real arm64 arch tree.
+
+target:
+  name: liteos64
+  port_name: rliteos64
+  source_repo: https://gitee.com/openharmony/kernel_liteos_a
+  source_commit: 1b5d3de13bea4a93e6713f180710f2f307cad403
+  source_dir: examples
+  isir_output_dir: targets/rliteos64/spec
+  rust_target_dir: targets/rliteos64
+  type_model: liteos64
+  preprocess:
+    defines:
+      LOSCFG_SYS_EXTERNAL_HEAP: 0
+      LOSCFG_MEM_MUL_POOL: 0
+      LOSCFG_TASK_MEM_USED: 1
+      LOSCFG_MEM_FREE_BY_TASKID: 0
+      LOSCFG_KERNEL_LMK: 0
+      LOSCFG_KERNEL_MMU: 1
+      LOSCFG_KERNEL_SMP: 1
+      LOSCFG_KERNEL_SMP_CORE_NUM: 1
+  mmio:
+    read_macros: [READ_UINT32]
+    write_macros: [WRITE_UINT32]
+  arch:
+    target_triple: aarch64-none-elf
+    mcpu: cortex-a53
+    asm_files:
+      - targets/rliteos64/arch/reset_vector.S
+      - targets/rliteos64/arch/task_switch.S
+    linker_script: targets/rliteos64/liteos.ld
+    uart_stub: targets/rliteos64/uart_pl011.rs
+  interface:
+    contracts:
+      - fn: LOS_ArchMmuQuery
+        spec: mmu_query
+  # Same two-level descriptor values as the ARMv6 source (the descriptor format is
+  # orthogonal to word width); a real arm64 target would declare a 4-level model.
+  memory:
+    page_size: 0x1000
+    pte_bits: 32
+    l1_index_shift: 20
+    l1_type_mask: 0x3
+    l1_section_type: 0x2
+    l1_section_frame: 0xFFF00000
+    l1_section_offset_mask: 0xFFFFF
+    l2_index_shift: 12
+    l2_small_page_type: 0x2
+    l2_small_page_frame: 0xFFFFF000
+    l2_small_page_offset_mask: 0xFFF
+  build:
+    build_system: gn
+    template: targets/rliteos64/BUILD.gn
+  qemu:
+    machine: virt
+    cpu: cortex-a53
+    memory: 128M
+  entrypoint: targets/rliteos64/run.sh
+  modules:
+    kernel_mm:     [LOS_MemAlloc, LOS_MemFree, LOS_MemAllocAlign]
+    kernel_sched:  [LOS_Schedule]

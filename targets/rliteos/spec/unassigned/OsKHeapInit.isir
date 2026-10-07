@@ -1,0 +1,63 @@
+isir_version: '0.1'
+module:
+  name: OsKHeapInit
+  clocks:
+  - name: clk
+    edge: posedge
+  resets:
+  - name: rst
+    polarity: active_high
+    async: false
+    affects: all
+  state:
+  - name: ret
+    kind: register
+    type: bits<32>
+    initial: 0
+  - name: ptr
+    kind: register
+    type: bits<32>
+    initial: 0
+  - name: end
+    kind: register
+    type: bits<32>
+    initial: 0
+  rules:
+  - name: OsKHeapInit
+    action:
+    - (write ptr 0)
+    - (write end (& (add (add (read g_vmBootMemBase) (read size)) 1048575) -1048576))
+    - (write size (sub (read end) (read g_vmBootMemBase)))
+    - (write ptr (OsVmBootMemAlloc (read size)))
+    - (PRINT_ERR 0 (read size))
+    - (write m_aucSysMem0 (read ptr))
+    - (write ret (LOS_MemInit (read m_aucSysMem0) (read size)))
+    - (PRINT_ERR 0)
+    - (write g_vmBootMemBase (sub (read g_vmBootMemBase) (read size)))
+  inputs:
+  - name: size
+    direction: input
+    type: bits<32>
+  abstraction:
+    relation:
+      name: alpha
+      source: LIR
+      target: ISIR
+      map_expr: lambda sigma. { sig_ret := sigma.ret, sig_ptr := sigma.ptr, sig_end
+        := sigma.end }
+      totality: true
+      notes: null
+    signals:
+    - sig_ret
+    - sig_ptr
+    - sig_end
+  properties:
+  - name: post_0
+    kind: safety
+    expression:
+      kind: always
+      operand: 'true'
+  proof_obligations:
+  - property: post_0
+    status: unproved
+    engine: model_checking

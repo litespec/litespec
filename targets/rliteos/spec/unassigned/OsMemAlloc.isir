@@ -1,0 +1,71 @@
+isir_version: '0.1'
+module:
+  name: OsMemAlloc
+  clocks:
+  - name: clk
+    edge: posedge
+  resets:
+  - name: rst
+    polarity: active_high
+    async: false
+    affects: all
+  state:
+  - name: allocNode
+    kind: register
+    type: bits<32>
+    initial: 0
+  - name: allocSize
+    kind: register
+    type: bits<32>
+    initial: 0
+  rules:
+  - name: OsMemAlloc
+    action:
+    - (write allocNode 0)
+    - (write allocSize (& (sub (add (UINTPTR (add (read size) 3)) 1) 1) (^ -1 (UINTPTR
+      0))))
+    - (write allocNode (OsMemFreeNodeGet (read pool) (read allocSize)))
+    - (LOS_SpinUnlockRestore AddrOf(target=Field(base=Var(name='pool'), name='spinlock'))
+      (read intSave))
+    - (PRINT_ERR 0)
+    - (OsMemInfoPrint (read pool))
+    - (PRINT_ERR 0 (read __FUNCTION__) (read allocSize))
+    - (PRINT_ERR 0)
+    - (LOS_SpinLockSave AddrOf(target=Field(base=Var(name='pool'), name='spinlock'))
+      AddrOf(target=Var(name='intSave')))
+    - (OsMemSplitNode (read pool) (read allocNode) (read allocSize))
+    - (write (field (read allocNode) sizeAndFlag) (| (field (read allocNode) sizeAndFlag)
+      2147483648))
+    - (OsMemWaterUsedRecord (read pool) (& (field (read allocNode) sizeAndFlag) -3758096385))
+  inputs:
+  - name: pool
+    direction: input
+    type: bits<32>
+  - name: size
+    direction: input
+    type: bits<32>
+  - name: intSave
+    direction: input
+    type: bits<32>
+  abstraction:
+    relation:
+      name: alpha
+      source: LIR
+      target: ISIR
+      map_expr: lambda sigma. { sig_allocNode := sigma.allocNode, sig_allocSize :=
+        sigma.allocSize }
+      totality: true
+      notes: null
+    signals:
+    - sig_allocNode
+    - sig_allocSize
+  properties:
+  - name: post_0
+    kind: safety
+    expression:
+      kind: always
+      operand: 'true'
+  proof_obligations:
+  - property: post_0
+    status: unproved
+    engine: model_checking

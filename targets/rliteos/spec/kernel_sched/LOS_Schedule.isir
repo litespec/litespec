@@ -1,0 +1,59 @@
+isir_version: '0.1'
+module:
+  name: LOS_Schedule
+  clocks:
+  - name: clk
+    edge: posedge
+  resets:
+  - name: rst
+    polarity: active_high
+    async: false
+    affects: all
+  state:
+  - name: intSave
+    kind: register
+    type: bits<32>
+    initial: 0
+  - name: runTask
+    kind: register
+    type: bits<32>
+    initial: 0
+  - name: rq
+    kind: register
+    type: bits<32>
+    initial: 0
+  rules:
+  - name: LOS_Schedule
+    action:
+    - (write runTask (OsCurrTaskGet ))
+    - (write rq (OsSchedRunqueue ))
+    - (OsSchedRunqueuePendingSet )
+    - (LOS_SpinLockSave AddrOf(target=Var(name='g_taskSpin')) AddrOf(target=Var(name='intSave')))
+    - (runTask_ops_timeSliceUpdate (read rq) (read runTask) (OsGetCurrSchedTimeCycle
+      ))
+    - (runTask_ops_enqueue (read rq) (read runTask))
+    - (OsSchedResched )
+    - (LOS_SpinUnlockRestore AddrOf(target=Var(name='g_taskSpin')) (read intSave))
+  abstraction:
+    relation:
+      name: alpha
+      source: LIR
+      target: ISIR
+      map_expr: lambda sigma. { sig_intSave := sigma.intSave, sig_runTask := sigma.runTask,
+        sig_rq := sigma.rq }
+      totality: true
+      notes: null
+    signals:
+    - sig_intSave
+    - sig_runTask
+    - sig_rq
+  properties:
+  - name: post_0
+    kind: safety
+    expression:
+      kind: always
+      operand: 'true'
+  proof_obligations:
+  - property: post_0
+    status: unproved
+    engine: model_checking

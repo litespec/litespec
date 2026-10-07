@@ -1,0 +1,76 @@
+# LiteOS type model: extends the default model with LiteOS typedefs.
+# Used by config/targets/liteos.yaml (type_model: liteos).
+
+name: liteos
+extends: default
+
+# void-like type names (``VOID`` is LiteOS's ``typedef void VOID``).
+c_void_names: [void, VOID]
+
+# Pointer/word width in bits for this target (LiteOS-A = 32-bit ARM).
+# ``Nat``/``Int`` (word-sized) lower to u32/u64 accordingly; ``NatN``/``IntN`` are fixed-width.
+word_bits: 32
+
+c_to_lir:
+  # LiteOS typedefs (los_typedef.h). C integer promotion means ≤32-bit types are
+  # promoted to int/word in arithmetic, so they map to Nat/Int. 64-bit types also
+  # map to the 32-bit word here: the word model (and ``__read``/``__write``/``MEM``)
+  # is 32-bit, so keeping UINT64 as u64 caused pervasive u64/u32 type mismatches.
+  UINT8: Nat
+  UINT16: Nat
+  UINT32: Nat
+  UINT64: Nat
+  INT8: Int
+  INT16: Int
+  INT32: Int
+  INT64: Int
+  CHAR: Int
+  UCHAR: Nat
+  SHORT: Int
+  USHORT: Nat
+  INT: Int
+  UINT: Nat
+  LONG: Int
+  ULONG: Nat
+  INTPTR: Int
+  UINTPTR: Nat
+  SIZE_T: Nat
+  SSIZE_T: Int
+  BOOL: Int  # typedef int BOOL (C: if (BOOL) ⇔ if (BOOL != 0))
+  VOID: Unit
+  # Function-pointer typedefs (``TSK_ENTRY_FUNC``, …) are word-sized handles.
+  TSK_ENTRY_FUNC: Nat
+
+# C typedef aliases (name → underlying C type) for the reference-C preamble.
+c_typedefs:
+  VOID: void
+  UINT8: unsigned char
+  UINT16: unsigned short
+  UINT32: unsigned int
+  UINT64: unsigned long long
+  INT8: signed char
+  INT16: signed short
+  INT32: signed int
+  INT64: signed long long
+  CHAR: char
+  UCHAR: unsigned char
+  SHORT: short
+  USHORT: unsigned short
+  INT: int
+  UINT: unsigned int
+  LONG: long
+  ULONG: unsigned long
+  INTPTR: long
+  UINTPTR: unsigned long
+  SIZE_T: unsigned long
+  SSIZE_T: long
+  BOOL: int
+
+# Word-sized integers are u32 on this 32-bit target (wrapping at 32 bits); the
+# signed Int types also lower to unsigned so mixed UINT32/INT32 arithmetic stays
+# consistent. Nat64/Int64 stay 64-bit for UINT64/INT64 overflow-guard arithmetic.
+lir_to_rust:
+  Int: u32
+  Nat: u32
+  Nat64: u64
+  Int64: u64

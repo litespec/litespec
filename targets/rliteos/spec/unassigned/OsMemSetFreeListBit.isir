@@ -1,0 +1,44 @@
+isir_version: '0.1'
+module:
+  name: OsMemSetFreeListBit
+  clocks:
+  - name: clk
+    edge: posedge
+  resets:
+  - name: rst
+    polarity: active_high
+    async: false
+    affects: all
+  state: []
+  rules:
+  - name: OsMemSetFreeListBit
+    action:
+    - (write (select (field (read head) freeListBitmap) (>> (read index) 5)) (| (select
+      (field (read head) freeListBitmap) (>> (read index) 5)) (<< 1 (& (read index)
+      31))))
+  inputs:
+  - name: head
+    direction: input
+    type: bits<32>
+  - name: index
+    direction: input
+    type: bits<32>
+  abstraction:
+    relation:
+      name: alpha
+      source: LIR
+      target: ISIR
+      map_expr: lambda sigma. { }
+      totality: true
+      notes: null
+    signals: []
+  properties:
+  - name: post_0
+    kind: safety
+    expression:
+      kind: always
+      operand: 'true'
+  proof_obligations:
+  - property: post_0
+    status: unproved
+    engine: model_checking

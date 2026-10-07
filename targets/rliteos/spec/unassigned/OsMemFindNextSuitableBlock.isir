@@ -1,0 +1,100 @@
+isir_version: '0.1'
+module:
+  name: OsMemFindNextSuitableBlock
+  clocks:
+  - name: clk
+    edge: posedge
+  resets:
+  - name: rst
+    polarity: active_high
+    async: false
+    affects: all
+  state:
+  - name: poolHead
+    kind: register
+    type: bits<32>
+    initial: 0
+  - name: fl
+    kind: register
+    type: bits<32>
+    initial: 0
+  - name: sl
+    kind: register
+    type: bits<32>
+    initial: 0
+  - name: index
+    kind: register
+    type: bits<32>
+    initial: 0
+  - name: tmp
+    kind: register
+    type: bits<32>
+    initial: 0
+  - name: curIndex
+    kind: register
+    type: bits<32>
+    initial: 0
+  - name: mask
+    kind: register
+    type: bits<32>
+    initial: 0
+  rules:
+  - name: OsMemFindNextSuitableBlock
+    action:
+    - (write poolHead (read pool))
+    - (write fl (OsMemFlGet (read size)))
+    - (write curIndex 223)
+    - (write index (read fl))
+    - (write sl (OsMemSlGet (read size) (read fl)))
+    - (write curIndex (add (add (<< (sub (read fl) 7) 3) (read sl)) 31))
+    - (write index (add (read curIndex) 1))
+    - (write tmp (OsMemNotEmptyIndexGet (read poolHead) (read index)))
+    - (write index (read tmp))
+    - (read __goto_DONE)
+    - (write index (LOS_Align (add (read index) 1) 32))
+    - (write index (add (read index) 32))
+    - (write mask (select (field (read poolHead) freeListBitmap) (>> (read index)
+      5)))
+    - (write index (add (OsMemFFS (read mask)) (read index)))
+    - (read __goto_DONE)
+    - (write (select (read outIndex) 0) (read curIndex))
+    - (read __label_DONE)
+    - (write (select (read outIndex) 0) (read index))
+  inputs:
+  - name: pool
+    direction: input
+    type: bits<32>
+  - name: size
+    direction: input
+    type: bits<32>
+  - name: outIndex
+    direction: input
+    type: bits<32>
+  abstraction:
+    relation:
+      name: alpha
+      source: LIR
+      target: ISIR
+      map_expr: lambda sigma. { sig_poolHead := sigma.poolHead, sig_fl := sigma.fl,
+        sig_sl := sigma.sl, sig_index := sigma.index, sig_tmp := sigma.tmp, sig_curIndex
+        := sigma.curIndex, sig_mask := sigma.mask }
+      totality: true
+      notes: null
+    signals:
+    - sig_poolHead
+    - sig_fl
+    - sig_sl
+    - sig_index
+    - sig_tmp
+    - sig_curIndex
+    - sig_mask
+  properties:
+  - name: post_0
+    kind: safety
+    expression:
+      kind: always
+      operand: 'true'
+  proof_obligations:
+  - property: post_0
+    status: unproved
+    engine: model_checking

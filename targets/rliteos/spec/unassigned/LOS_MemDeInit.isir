@@ -1,0 +1,46 @@
+isir_version: '0.1'
+module:
+  name: LOS_MemDeInit
+  clocks:
+  - name: clk
+    edge: posedge
+  resets:
+  - name: rst
+    polarity: active_high
+    async: false
+    affects: all
+  state:
+  - name: tmpPool
+    kind: register
+    type: bits<32>
+    initial: 0
+  rules:
+  - name: LOS_MemDeInit
+    action:
+    - (write tmpPool (read pool))
+    - (OsMemPoolDeInit (read tmpPool) (field (field (read tmpPool) info) totalSize))
+    - (OsHookCall (read LOS_HOOK_TYPE_MEM_DEINIT) (read tmpPool))
+  inputs:
+  - name: pool
+    direction: input
+    type: bits<32>
+  abstraction:
+    relation:
+      name: alpha
+      source: LIR
+      target: ISIR
+      map_expr: lambda sigma. { sig_tmpPool := sigma.tmpPool }
+      totality: true
+      notes: null
+    signals:
+    - sig_tmpPool
+  properties:
+  - name: post_0
+    kind: safety
+    expression:
+      kind: always
+      operand: 'true'
+  proof_obligations:
+  - property: post_0
+    status: unproved
+    engine: model_checking

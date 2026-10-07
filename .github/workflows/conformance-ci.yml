@@ -1,0 +1,20 @@
+name: conformance-ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  conformance:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          python-version: "3.12"
+      - run: ./install.sh --python-only
+      - run: ./run.sh conformance
+      # Run the negative suite directly (no combined-source fan-out / toolchain,
+      # which ./run.sh test would trigger even for a subset).
+      - run: uv run pytest -p no:cacheprovider tests/negative

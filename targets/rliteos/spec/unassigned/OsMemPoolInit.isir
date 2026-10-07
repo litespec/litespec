@@ -1,0 +1,76 @@
+isir_version: '0.1'
+module:
+  name: OsMemPoolInit
+  clocks:
+  - name: clk
+    edge: posedge
+  resets:
+  - name: rst
+    polarity: active_high
+    async: false
+    affects: all
+  state:
+  - name: poolHead
+    kind: register
+    type: bits<32>
+    initial: 0
+  - name: newNode
+    kind: register
+    type: bits<32>
+    initial: 0
+  - name: endNode
+    kind: register
+    type: bits<32>
+    initial: 0
+  rules:
+  - name: OsMemPoolInit
+    action:
+    - (write poolHead (read pool))
+    - (write newNode 0)
+    - (write endNode 0)
+    - (memset_s (read poolHead) 238 0 238)
+    - (LOS_SpinInit AddrOf(target=Field(base=Var(name='poolHead'), name='spinlock')))
+    - (write (field (field (read poolHead) info) pool) (read pool))
+    - (write (field (field (read poolHead) info) totalSize) (read size))
+    - (write (field (field (read poolHead) info) attr) 2)
+    - (write newNode (add (read pool) 238))
+    - (write (field (read newNode) sizeAndFlag) (sub (sub (read size) 238) 3))
+    - (write (field (field (read newNode) ptr) prev) 0)
+    - (write (field (read newNode) magic) 2882395322)
+    - (OsMemFreeNodeAdd (read pool) (read newNode))
+    - (write endNode (sub (add (read pool) (read size)) 3))
+    - (write (field (read endNode) magic) 2882395322)
+    - (write (field (read endNode) sizeAndFlag) 0)
+    - (write (field (field (read endNode) ptr) prev) (read newNode))
+    - (write (field (read endNode) sizeAndFlag) (| (field (read endNode) sizeAndFlag)
+      2147483648))
+  inputs:
+  - name: pool
+    direction: input
+    type: bits<32>
+  - name: size
+    direction: input
+    type: bits<32>
+  abstraction:
+    relation:
+      name: alpha
+      source: LIR
+      target: ISIR
+      map_expr: lambda sigma. { sig_poolHead := sigma.poolHead, sig_newNode := sigma.newNode,
+        sig_endNode := sigma.endNode }
+      totality: true
+      notes: null
+    signals:
+    - sig_poolHead
+    - sig_newNode
+    - sig_endNode
+  properties:
+  - name: post_0
+    kind: safety
+    expression:
+      kind: always
+      operand: 'true'
+  proof_obligations:
+  - property: post_0
+    status: unproved
+    engine: model_checking
