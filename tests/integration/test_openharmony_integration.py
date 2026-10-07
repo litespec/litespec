@@ -11,7 +11,7 @@ from pathlib import Path
 
 import pytest
 
-from litespec.build import generate_build_gn
+from litespec.build_gn import generate_build_gn
 from litespec.targets import load_target, third_party_dir
 
 TARGET = load_target("liteos")

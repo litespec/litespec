@@ -5,7 +5,7 @@ from __future__ import annotations
 import argparse
 import sys
 
-from litespec.build import generate_build_gn
+from litespec.build_gn import generate_build_gn
 from litespec.targets import available_targets, load_target, resolve_target
 
 
